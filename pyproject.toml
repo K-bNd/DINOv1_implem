@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "dinov1-implem"
+version = "0.1.0"
+description = "DINOv1 model implementation using Pytorch"
+authors = ["KB <kevin-brian.n-diaye@epita.fr>"]
+license = "MIT License"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.2.0"
+torchvision = "^0.17.0"
+timm = "^0.9.16"
+
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0.0"
+matplotlib = "^3.8.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
