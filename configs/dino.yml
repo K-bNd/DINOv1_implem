@@ -1,0 +1,14 @@
+# Model
+backbone_model: vit_tiny
+scheduler: cosine
+optimizer: adamw
+teacher_temp: 0.04
+student_temp: 0.1
+center_momentum: 0.9
+
+# Training
+epochs: 20
+batch_size: 128
+
+# Misc
+seed: 42

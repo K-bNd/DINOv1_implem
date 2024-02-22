@@ -1,21 +1,44 @@
-import torch
+from argparse import Namespace
+from pydantic import ValidationError
+import torch.nn as nn
+from torch import manual_seed as set_torch_seed
+from torch.cuda import manual_seed as set_cuda_seed
 import torchvision.transforms.v2 as v2_transforms
+from yaml import load, FullLoader
+
+from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 
 
-class Config:
-    def __init__(self, dictionary):
-        for key in dictionary:
-            setattr(self, key, dictionary[key])
+def get_configs(args: dict, options: list[str]):
+    """Get configs from argparse and use pydantic for validation"""
+    configs = {}
+    config_types = [ConfigDINO, ConfigDINO_Head, ConfigDataset]
+
+    for idx, option in enumerate(options):
+        with open(args[option]) as f:
+            try:
+                configs[option] = config_types[idx](**load(f, Loader=FullLoader))
+            except ValidationError as err:
+                print(err)
+
+    return configs
 
 
 def get_random_apply(transforms: list[v2_transforms.Transform], prob=0.5):
-    return v2_transforms.RandomApply(torch.nn.ModuleList(transforms), p=prob)
+    """Apply RandomApply transformations with a given probability"""
+    return v2_transforms.RandomApply(nn.ModuleList(transforms), p=prob)
+
+
+def set_seeds(seed: int):
+    """Set random seeds"""
+    set_torch_seed(seed)
+    set_cuda_seed(seed)
 
 
 class DataAugmentationDINO:
     def __init__(
         self,
-        config: Config,
+        config: ConfigDataset,
     ):
         flip_and_color_jitter = v2_transforms.Compose(
             [
@@ -44,8 +67,8 @@ class DataAugmentationDINO:
         self.global_transfo1 = v2_transforms.Compose(
             [
                 v2_transforms.RandomResizedCrop(
-                    32,
-                    scale=config.global_crops_scale,
+                    config.img_size,
+                    scale=config.global_crop_ratio,
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
@@ -58,8 +81,8 @@ class DataAugmentationDINO:
         self.global_transfo2 = v2_transforms.Compose(
             [
                 v2_transforms.RandomResizedCrop(
-                    32,
-                    scale=config.global_crops_scale,
+                    config.img_size,
+                    scale=config.global_crop_ratio,
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
@@ -72,12 +95,12 @@ class DataAugmentationDINO:
         )
 
         # transformation for the local small crops
-        self.local_crops_number = config.local_crops_number
+        self.local_crops_number = config.nb_local_crops
         self.local_transfo = v2_transforms.Compose(
             [
                 v2_transforms.RandomResizedCrop(
                     config.local_crop_size,
-                    scale=config.local_crops_scale,
+                    scale=config.local_crop_ratio,
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,

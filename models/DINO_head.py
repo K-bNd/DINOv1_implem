@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import Config
+from configs.config_models import ConfigDINO_Head
 
 
 class DINO_Head(nn.Module):
-    def __init__(self, config: Config) -> None:
+    def __init__(self, in_dim: int, config: ConfigDINO_Head) -> None:
         super().__init__()
 
-        self.in_dim = config.in_dim
+        self.in_dim = in_dim
         self.hidden_dim = config.hidden_dim
         self.bottleneck_dim = config.bottleneck_dim
         self.out_dim = config.out_dim
