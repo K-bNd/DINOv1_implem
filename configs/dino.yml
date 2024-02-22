@@ -1,14 +1,24 @@
 # Model
 backbone_model: vit_tiny
-scheduler: cosine
+patch_size: 16
 optimizer: adamw
+out_dim: 1024
+
 teacher_temp: 0.04
+teacher_momentum: 0.996
 student_temp: 0.1
 center_momentum: 0.9
 
 # Training
-epochs: 20
+warmup_epochs: 5
+epochs: 100
 batch_size: 128
+lr: 5e-5
+min_lr: 1e-6
+weight_decay: 0.04
+weight_decay_end: 0.4
 
 # Misc
 seed: 42
+checkpoint_freq: 10
+log_path: ../logs
