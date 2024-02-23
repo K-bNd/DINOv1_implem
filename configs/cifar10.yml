@@ -1,4 +1,6 @@
 # Dataset
+name: CIFAR10
+root: ../data
 train_dataset_aug_path: data/cifar10/train_aug
 train_dataset_plain_path: data/cifar10/train_plain
 test_dataset_path: data/cifar10/test

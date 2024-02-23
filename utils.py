@@ -1,4 +1,3 @@
-from argparse import Namespace
 from pydantic import ValidationError
 import torch.nn as nn
 from torch import manual_seed as set_torch_seed

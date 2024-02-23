@@ -9,11 +9,12 @@ class ConfigDINO(BaseModel):
     warmup_epochs: int = 5
     teacher_temp: float = 0.04
     student_temp: float = 0.1
+    teacher_momemtum: float = 0.996
     center_momentum: float = 0.9
     epochs: int = 100
     batch_size: int = 128
     min_lr: float = 1e-6
-    lr: float = 5e-5
+    start_lr: float = 5e-5
     seed: int = 42
     checkpoint_freq: int = 10
     log_path: str = "../logs"
@@ -29,6 +30,8 @@ class ConfigDINO_Head(BaseModel):
 
 
 class ConfigDataset(BaseModel):
+    name: str = "CIFAR10"
+    root: str = "../data"
     img_size: int = 32
     num_classes: int = 10
     global_crop_ratio: tuple[float, float] = (0.32, 1.0)
