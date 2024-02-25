@@ -1,7 +1,6 @@
 from pydantic import ValidationError
+import torch
 import torch.nn as nn
-from torch import manual_seed as set_torch_seed
-from torch.cuda import manual_seed as set_cuda_seed
 import torchvision.transforms.v2 as v2_transforms
 from yaml import load, FullLoader
 
@@ -28,12 +27,6 @@ def get_random_apply(transforms: list[v2_transforms.Transform], prob=0.5):
     return v2_transforms.RandomApply(nn.ModuleList(transforms), p=prob)
 
 
-def set_seeds(seed: int):
-    """Set random seeds"""
-    set_torch_seed(seed)
-    set_cuda_seed(seed)
-
-
 class DataAugmentationDINO:
     def __init__(
         self,
@@ -55,7 +48,8 @@ class DataAugmentationDINO:
         )
         normalize = v2_transforms.Compose(
             [
-                v2_transforms.ToTensor(),
+                v2_transforms.ToImage(),
+                v2_transforms.ToDtype(torch.float32, scale=True),
                 v2_transforms.Normalize(config.dataset_means, config.dataset_stds),
             ]
         )

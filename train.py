@@ -1,27 +1,29 @@
 import torch
+from torch.cuda import manual_seed_all as set_cuda_seed
 import argparse
 import wandb
-from utils import get_configs, set_seeds
+from utils import get_configs
 from Trainer import Trainer
 
 
 def train(configs: dict):
-    set_seeds(configs["dino-config"].seed)
+    set_cuda_seed(configs["dino_config"].seed)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
-    trainer = Trainer(
-        device,
-        configs["dino_config"],
-        configs["dino_head_config"],
-        configs["dataset_config"],
-    )
 
     wandb.init(
         project="DINOv1",
-        config=configs["dino_config"]
-        | configs["dino_head_config"]
-        | configs["dataset_config"],
+        config=configs["dino_config"].model_dump()
+        | configs["dino_head_config"].model_dump()
+        | configs["dataset_config"].model_dump(),
+    )
+
+    trainer = Trainer(
+        configs["dino_config"],
+        configs["dino_head_config"],
+        configs["dataset_config"],
+        device=device,
     )
 
     trainer.train()

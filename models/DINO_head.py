@@ -27,7 +27,7 @@ class DINO_Head(nn.Module):
         self.mlp = nn.Sequential(*layers)
         self.apply(self._init_weights)
 
-        self.last_layer = nn.utils.weight_norm(
+        self.last_layer = nn.utils.parametrizations.weight_norm(
             nn.Linear(self.bottleneck_dim, self.out_dim)
         )
 

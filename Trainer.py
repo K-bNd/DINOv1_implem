@@ -33,8 +33,6 @@ class Trainer:
 
         self.loss_fn = DINO_Loss(dino_config)
 
-        self.print_config()
-
     def _init_optimizer(self, optimizer_type: str, lr: float) -> Optimizer:
         """Initialize optimizer"""
         match optimizer_type:
@@ -89,13 +87,16 @@ class Trainer:
                 )
 
         return torch.utils.data.DataLoader(
-            dataset, self.dino_config.batch_size, shuffle=True
+            dataset,
+            self.dino_config.batch_size,
+            shuffle=True,
+            generator=torch.Generator(device="cuda"),
         )
 
     def _set_schedulers(self, lr) -> None:
         self.warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             self.optimizer,
-            start_factor=0,
+            start_factor=1e-5,
             end_factor=lr,
             total_iters=self.dino_config.warmup_epochs,
         )
@@ -113,7 +114,6 @@ class Trainer:
                 student_out, teacher_out = self.model(crops, training=True)
                 loss = self.loss_fn(student_out, teacher_out)
             scaled_loss = scaler.scale(loss).backward()
-            scaled_loss.backward()
             scaler.step(self.optimizer)
             scaler.update()
             self.model.update_teacher(self.dino_config.teacher_momemtum)

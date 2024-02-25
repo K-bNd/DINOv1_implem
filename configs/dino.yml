@@ -1,6 +1,6 @@
 # Model
 backbone_model: vit_tiny
-patch_size: 16
+patch_size: 4
 optimizer: adamw
 out_dim: 1024
 
