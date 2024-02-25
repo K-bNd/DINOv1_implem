@@ -26,6 +26,7 @@ class DINO(nn.Module):
         self.teacher_head = DINO_Head(self.embed_dim, dino_head_config)
 
         self.teacher_backbone.load_state_dict(self.student_backbone.state_dict())
+        self.teacher_head.load_state_dict(self.student_head.state_dict())
 
     def _init_backbone(self):
         """Initialize backbone model"""
@@ -108,15 +109,15 @@ class DINO(nn.Module):
         # Perform forward passes on each group of images with the same resolution
         start_idx = 0
         for count in counts:
-            group_x = torch.cat(crops[start_idx:count])
-            group_output = self.student_backbone.forward_features(group_x)
+            x = torch.cat(crops[start_idx:count])
+            group_output = self.student_backbone(x)
             output = torch.cat((output, group_output.detach()))  # Concatenate outputs
             start_idx = count
 
         return self.student_head(output)
 
     def _teacher_forward(self, global_crops: torch.Tensor) -> torch.Tensor:
-        x = self.teacher_backbone.forward_features(global_crops)
+        x = self.teacher_backbone(global_crops)
         x = self.teacher_head(x)
 
         return x
