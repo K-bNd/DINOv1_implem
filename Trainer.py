@@ -116,7 +116,6 @@ class Trainer:
             ):
                 student_out, teacher_out = self.model(crops, training=True)
                 loss = self.loss_fn(student_out, teacher_out)
-            print("test")
             scaled_loss = scaler.scale(loss).backward()
             scaler.step(self.optimizer)
             scaler.update()
