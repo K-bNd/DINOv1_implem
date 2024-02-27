@@ -104,14 +104,14 @@ class DINO(nn.Module):
         image_sizes = torch.tensor([crop.shape[-1] for crop in crops])
         counts = torch.unique_consecutive(image_sizes, return_counts=True)[1]
 
-        output = torch.empty(0)
+        output = torch.empty(0, requires_grad=True)
 
         # Perform forward passes on each group of images with the same resolution
         start_idx = 0
         for count in counts:
             x = torch.cat(crops[start_idx:count])
             group_output = self.student_backbone(x)
-            output = torch.cat((output, group_output.detach()))  # Concatenate outputs
+            output = torch.cat((output, group_output))  # Concatenate outputs
             start_idx = count
 
         return self.student_head(output)

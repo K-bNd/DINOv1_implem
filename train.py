@@ -16,7 +16,8 @@ def train(configs: dict):
         project="DINOv1",
         config=configs["dino_config"].model_dump()
         | configs["dino_head_config"].model_dump()
-        | configs["dataset_config"].model_dump(),
+        | configs["dataset_config"].model_dump()
+        | {"device": device},
     )
 
     trainer = Trainer(

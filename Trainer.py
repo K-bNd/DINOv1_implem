@@ -32,6 +32,8 @@ class Trainer:
         self._set_schedulers(lr)
 
         self.loss_fn = DINO_Loss(dino_config)
+        self.amp_enabled = True if self.device != "cpu" else False
+        self.training_dtype = torch.float16 if self.amp_enabled else torch.bfloat16
 
     def _init_optimizer(self, optimizer_type: str, lr: float) -> Optimizer:
         """Initialize optimizer"""
@@ -90,7 +92,7 @@ class Trainer:
             dataset,
             self.dino_config.batch_size,
             shuffle=True,
-            generator=torch.Generator(device="cuda"),
+            generator=torch.Generator(device=self.device),
         )
 
     def _set_schedulers(self, lr) -> None:
@@ -108,11 +110,13 @@ class Trainer:
 
     def train_one_epoch(self, scaler: GradScaler) -> None:
         """Train for one epoch"""
-
-        with torch.autocast(device_type=self.device, dtype=torch.float16):
-            for _, (crops, _) in enumerate(self.dataloader):
+        for _, (crops, _) in enumerate(self.dataloader):
+            with torch.autocast(
+                device_type=self.device, dtype=self.training_dtype, enabled=self.amp_enabled
+            ):
                 student_out, teacher_out = self.model(crops, training=True)
                 loss = self.loss_fn(student_out, teacher_out)
+            print("test")
             scaled_loss = scaler.scale(loss).backward()
             scaler.step(self.optimizer)
             scaler.update()
@@ -129,16 +133,16 @@ class Trainer:
     def train(self):
         """Train the model using given parameters (dino.yml)"""
         self.model.train()
-        scaler = torch.cuda.amp.GradScaler()
+        scaler = torch.cuda.amp.GradScaler(enabled=self.amp_enabled)
         for warmup_epoch in range(self.dino_config.warmup_epochs):
             print(
-                f"\n (Warmup) epoch: {warmup_epoch} / {self.dino_config.warmup_epochs}"
+                f"\n (Warmup) epoch: {warmup_epoch + 1} / {self.dino_config.warmup_epochs}"
             )
             self.train_one_epoch(scaler)
             self.warmup_scheduler.step(warmup_epoch)
         print("Warmup done !\n")
         for epoch in range(self.dino_config.epochs):
-            print(f"\nEpoch: {epoch} / {self.dino_config.epochs}")
+            print(f"\nEpoch: {epoch + 1} / {self.dino_config.epochs}")
             self.train_one_epoch(epoch)
             self.scheduler.step()
 
