@@ -24,8 +24,8 @@ class ConfigDINO(BaseModel):
 
 class ConfigDINO_Head(BaseModel):
     out_dim: int = 1024
-    hidden_dim: int = 2048
-    bottleneck_dim: int = 256
+    hidden_dim: int = 256
+    bottleneck_dim: int = 128
     use_bn: bool = False
 
 

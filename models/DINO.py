@@ -102,17 +102,18 @@ class DINO(nn.Module):
     def _student_forward(self, crops: list) -> torch.Tensor:
         # Extract and group image sizes for efficient forward passes
         image_sizes = torch.tensor([crop.shape[-1] for crop in crops])
-        counts = torch.unique_consecutive(image_sizes, return_counts=True)[1]
 
-        output = torch.empty(0, requires_grad=True)
+        nb_global_crops, _ = torch.unique_consecutive(image_sizes, return_counts=True)[
+            1
+        ]
 
-        # Perform forward passes on each group of images with the same resolution
-        start_idx = 0
-        for count in counts:
-            x = torch.cat(crops[start_idx:count])
-            group_output = self.student_backbone(x)
-            output = torch.cat((output, group_output))  # Concatenate outputs
-            start_idx = count
+        global_crops = torch.cat(crops[:nb_global_crops])
+        local_crops = torch.cat(crops[nb_global_crops:])
+
+        global_crops_output = self.student_backbone(global_crops)
+        local_crops_output = self.student_backbone(local_crops)
+
+        output = torch.cat((global_crops_output, local_crops_output))
 
         return self.student_head(output)
 
