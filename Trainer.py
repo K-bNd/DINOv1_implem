@@ -112,7 +112,9 @@ class Trainer:
         """Train for one epoch"""
         for _, (crops, _) in enumerate(self.dataloader):
             with torch.autocast(
-                device_type=self.device, dtype=self.training_dtype, enabled=self.amp_enabled
+                device_type=self.device,
+                dtype=self.training_dtype,
+                enabled=self.amp_enabled,
             ):
                 student_out, teacher_out = self.model(crops, training=True)
                 loss = self.loss_fn(student_out, teacher_out)
@@ -144,5 +146,4 @@ class Trainer:
             print(f"\nEpoch: {epoch + 1} / {self.dino_config.epochs}")
             self.train_one_epoch(epoch)
             self.scheduler.step()
-
         print("Training over !\n")

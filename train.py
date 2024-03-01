@@ -6,13 +6,13 @@ from utils import get_configs
 from Trainer import Trainer
 
 
-def train(configs: dict):
+def train(configs: dict, save_file: str):
     set_cuda_seed(configs["dino_config"].seed)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.set_default_device(device)
 
-    wandb.init(
+    run = wandb.init(
         project="DINOv1",
         config=configs["dino_config"].model_dump()
         | configs["dino_head_config"].model_dump()
@@ -28,6 +28,10 @@ def train(configs: dict):
     )
 
     trainer.train()
+
+    torch.save(trainer.model.state_dict(), save_file)
+    # Log the model to the W&B run
+    run.log_model(path=save_file, name=configs["dataset_config"].name)
 
 
 if __name__ == "__main__":
@@ -51,6 +55,12 @@ if __name__ == "__main__":
         default="configs/cifar10.yml",
         help="Config YAML file for the dataset",
     )
+    parser.add_argument(
+        "--save_file",
+        type=str,
+        default="model_weights/model.pt",
+        help="Where to save the model after training",
+    )
 
     args = vars(parser.parse_args())
 
@@ -58,4 +68,4 @@ if __name__ == "__main__":
         args, ["dino_config", "dino_head_config", "dataset_config"]
     )
 
-    train(configs=train_configs)
+    train(configs=train_configs, save_file=args["save_file"])
