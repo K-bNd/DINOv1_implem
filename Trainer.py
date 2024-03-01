@@ -144,6 +144,6 @@ class Trainer:
         print("Warmup done !\n")
         for epoch in range(self.dino_config.epochs):
             print(f"\nEpoch: {epoch + 1} / {self.dino_config.epochs}")
-            self.train_one_epoch(epoch)
-            self.scheduler.step()
+            self.train_one_epoch(scaler)
+            self.scheduler.step(epoch)
         print("Training over !\n")
