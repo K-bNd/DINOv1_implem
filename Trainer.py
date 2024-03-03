@@ -109,7 +109,7 @@ class Trainer:
             eta_min=lr,
         )
 
-    def train_one_epoch(self, epoch: int, loop: tqdm) -> None:
+    def train_one_epoch(self, epoch: int, loop: tqdm, warmup=False) -> None:
         """Train for one epoch"""
         for _, (crops, _) in loop:
             with torch.autocast(
@@ -131,7 +131,12 @@ class Trainer:
                 }
             )
 
-            loop.set_description(f"Epoch [{epoch} / {self.dino_config.epochs}]")
+            if warmup:
+                loop.set_description(
+                    f"(Warmup) Epoch [{epoch} / {self.dino_config.warmup_epochs}]"
+                )
+            else:
+                loop.set_description(f"Epoch [{epoch} / {self.dino_config.epochs}]")
             loop.set_postfix(
                 {
                     "Loss": loss.item(),
@@ -146,9 +151,9 @@ class Trainer:
                 enumerate(self.dataloader),
                 desc="Warmup training",
                 total=len(self.dataloader),
-                ascii="=",
+                ascii=True,
             )
-            self.train_one_epoch(self.scaler, warmup_epoch, loop)
+            self.train_one_epoch(warmup_epoch, loop, warmup=True)
             self.warmup_scheduler.step(warmup_epoch)
         print("Warmup done !\n")
 
@@ -189,3 +194,4 @@ class Trainer:
         torch.save(
             state_dict, self.dino_config.checkpoint_dir + f"{epoch}_checkpoint.pt"
         )
+        wandb.save(self.dino_config.checkpoint_dir + f"{epoch}_checkpoint.pt")

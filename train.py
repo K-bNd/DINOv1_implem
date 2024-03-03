@@ -29,7 +29,7 @@ def train(configs: dict, save_path: str, checkpoint_path: str | None):
         device=device,
     )
 
-    if not run.resumed:
+    if not run.resumed or checkpoint_path is None:
         trainer.train()
     else:
         checkpoint = torch.load(wandb.restore(checkpoint_path))
