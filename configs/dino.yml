@@ -11,7 +11,7 @@ center_momentum: 0.9
 
 # Training
 warmup_epochs: 5
-epochs: 40
+epochs: 20
 batch_size: 128
 start_lr: 5e-5
 min_lr: 1e-6

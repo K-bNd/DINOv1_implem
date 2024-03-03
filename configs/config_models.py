@@ -11,7 +11,7 @@ class ConfigDINO(BaseModel):
     student_temp: float = 0.1
     teacher_momemtum: float = 0.996
     center_momentum: float = 0.9
-    epochs: int = 40
+    epochs: int = 20
     batch_size: int = 128
     min_lr: float = 1e-6
     start_lr: float = 5e-5
