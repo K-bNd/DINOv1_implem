@@ -154,7 +154,7 @@ class Trainer:
                 ascii=True,
             )
             self.train_one_epoch(warmup_epoch, loop, warmup=True)
-            self.warmup_scheduler.step(warmup_epoch)
+            self.warmup_scheduler.step()
         print("Warmup done !\n")
 
     def train(self, warmup=True, start_epoch=1):
