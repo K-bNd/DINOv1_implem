@@ -83,21 +83,25 @@ class DINO(nn.Module):
                 raise ValueError(f"Unsupported backbone model: {self.backbone_type}")
 
     def update_teacher(self, teacher_momentum: float):
-        for (student_ps_backbone, teacher_ps_backbone), (
-            student_ps_head,
-            teacher_ps_head,
-        ) in zip(
-            zip(self.student_backbone.parameters(), self.teacher_backbone.parameters()),
-            zip(self.student_head.parameters(), self.teacher_head.parameters()),
-        ):
-            teacher_ps_backbone.data = (
-                teacher_ps_backbone.data * (1 - teacher_momentum)
-                + student_ps_backbone.data * teacher_momentum
-            )
-            teacher_ps_head.data = (
-                teacher_ps_head.data * (1 - teacher_momentum)
-                + student_ps_head.data * teacher_momentum
-            )
+        with torch.no_grad():
+            for (student_ps_backbone, teacher_ps_backbone), (
+                student_ps_head,
+                teacher_ps_head,
+            ) in zip(
+                zip(
+                    self.student_backbone.parameters(),
+                    self.teacher_backbone.parameters(),
+                ),
+                zip(self.student_head.parameters(), self.teacher_head.parameters()),
+            ):
+                teacher_ps_backbone.data = (
+                    teacher_ps_backbone.data * (1 - teacher_momentum)
+                    + student_ps_backbone.data * teacher_momentum
+                )
+                teacher_ps_head.data = (
+                    teacher_ps_head.data * (1 - teacher_momentum)
+                    + student_ps_head.data * teacher_momentum
+                )
 
     def _student_forward(self, crops: list) -> torch.Tensor:
         # Extract and group image sizes for efficient forward passes

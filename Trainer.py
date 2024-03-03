@@ -4,7 +4,7 @@ import torchvision
 import wandb
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 from torch.optim import Optimizer
-from torch.cuda.amp import GradScaler
+from tqdm import tqdm
 from models.DINO import DINO
 from models.DINO_loss import DINO_Loss
 from utils import DataAugmentationDINO
@@ -34,6 +34,7 @@ class Trainer:
         self.loss_fn = DINO_Loss(dino_config)
         self.amp_enabled = True if self.device != "cpu" else False
         self.training_dtype = torch.float16 if self.amp_enabled else torch.bfloat16
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp_enabled)
 
     def _init_optimizer(self, optimizer_type: str, lr: float) -> Optimizer:
         """Initialize optimizer"""
@@ -100,17 +101,17 @@ class Trainer:
             self.optimizer,
             start_factor=1e-5,
             end_factor=lr,
-            total_iters=self.dino_config.warmup_epochs,
+            total_iters=self.dino_config.warmup_epochs * len(self.dataloader),
         )
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer,
-            T_max=self.dino_config.epochs,
+            T_max=self.dino_config.epochs * len(self.dataloader),
             eta_min=lr,
         )
 
-    def train_one_epoch(self, scaler: GradScaler) -> None:
+    def train_one_epoch(self, epoch: int, loop: tqdm) -> None:
         """Train for one epoch"""
-        for _, (crops, _) in enumerate(self.dataloader):
+        for _, (crops, _) in loop:
             with torch.autocast(
                 device_type=self.device,
                 dtype=self.training_dtype,
@@ -118,32 +119,73 @@ class Trainer:
             ):
                 student_out, teacher_out = self.model(crops, training=True)
                 loss = self.loss_fn(student_out, teacher_out)
-            scaled_loss = scaler.scale(loss).backward()
-            scaler.step(self.optimizer)
-            scaler.update()
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
             self.model.update_teacher(self.dino_config.teacher_momemtum)
             self.optimizer.zero_grad()
             wandb.log(
                 {
-                    "loss": loss,
-                    "scaled_loss": scaled_loss,
-                    "lr": self.optimizer.param_groups[0]["lr"],
+                    "loss": loss.item(),
+                    "lr": self.scheduler.get_last_lr()[0],
                 }
             )
 
-    def train(self):
-        """Train the model using given parameters (dino.yml)"""
-        self.model.train()
-        scaler = torch.cuda.amp.GradScaler(enabled=self.amp_enabled)
-        for warmup_epoch in range(self.dino_config.warmup_epochs):
-            print(
-                f"\n (Warmup) epoch: {warmup_epoch + 1} / {self.dino_config.warmup_epochs}"
+            loop.set_description(f"Epoch [{epoch} / {self.dino_config.epochs}]")
+            loop.set_postfix(
+                {
+                    "Loss": loss.item(),
+                    "Learning rate": self.scheduler.get_last_lr()[0],
+                }
             )
-            self.train_one_epoch(scaler)
+
+    def warmup_train(self):
+        """Warmup training run with linear lr scheduler"""
+        for warmup_epoch in range(1, self.dino_config.warmup_epochs + 1):
+            loop = tqdm(
+                enumerate(self.dataloader),
+                desc="Warmup training",
+                total=len(self.dataloader),
+                ascii="=",
+            )
+            self.train_one_epoch(self.scaler, warmup_epoch, loop)
             self.warmup_scheduler.step(warmup_epoch)
         print("Warmup done !\n")
-        for epoch in range(self.dino_config.epochs):
-            print(f"\nEpoch: {epoch + 1} / {self.dino_config.epochs}")
-            self.train_one_epoch(scaler)
-            self.scheduler.step(epoch)
+
+    def train(self, warmup=True, start_epoch=1):
+        """
+        Train the model using given parameters and cosine scheduler.
+        """
+        self.model.train()
+        if warmup:
+            self.warmup_train()
+        for epoch in range(start_epoch, self.dino_config.epochs + 1):
+            loop = tqdm(
+                enumerate(self.dataloader), desc="Training", total=len(self.dataloader)
+            )
+            self.train_one_epoch(epoch, loop)
+
+            if epoch % self.dino_config.checkpoint_freq == 0:
+                self.save_checkpoint(epoch)
+            self.scheduler.step()
+
         print("Training over !\n")
+
+    def save_checkpoint(self, epoch: int) -> None:
+        """Save current trainer state to disk"""
+        state_dict = {
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "scaler": self.scaler.state_dict(),
+            "scheduler": self.scheduler.state_dict(),
+            "amp_enabled": self.amp_enabled,
+            "epoch": epoch,
+            "dataset_config": self.dataset_config.model_dump(),
+            "dino_config": self.dino_config.model_dump(),
+            "dino_head_config": self.dino_head_config.model_dump(),
+            "loss_center": self.loss_fn.center,
+        }
+
+        torch.save(
+            state_dict, self.dino_config.checkpoint_dir + f"{epoch}_checkpoint.pt"
+        )

@@ -11,7 +11,7 @@ center_momentum: 0.9
 
 # Training
 warmup_epochs: 5
-epochs: 100
+epochs: 40
 batch_size: 128
 start_lr: 5e-5
 min_lr: 1e-6
@@ -21,4 +21,4 @@ weight_decay_end: 0.4
 # Misc
 seed: 42
 checkpoint_freq: 10
-log_path: ../logs
+checkpoint_dir: "./logs/"

@@ -2,11 +2,12 @@ import torch
 from torch.cuda import manual_seed_all as set_cuda_seed
 import argparse
 import wandb
+from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 from utils import get_configs
 from Trainer import Trainer
 
 
-def train(configs: dict, save_file: str):
+def train(configs: dict, save_path: str, checkpoint_path: str | None):
     set_cuda_seed(configs["dino_config"].seed)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -18,6 +19,7 @@ def train(configs: dict, save_file: str):
         | configs["dino_head_config"].model_dump()
         | configs["dataset_config"].model_dump()
         | {"device": device},
+        resume=True,
     )
 
     trainer = Trainer(
@@ -27,11 +29,24 @@ def train(configs: dict, save_file: str):
         device=device,
     )
 
-    trainer.train()
+    if not run.resumed:
+        trainer.train()
+    else:
+        checkpoint = torch.load(wandb.restore(checkpoint_path))
+        trainer.model.load_state_dict(checkpoint["model"])
+        trainer.optimizer.load_state_dict(checkpoint["optimizer"])
+        trainer.scaler.load_state_dict(checkpoint["scaler"])
+        trainer.scheduler.load_state_dict(checkpoint["scheduler"])
+        trainer.amp_enabled = checkpoint["amp_enabled"]
+        trainer.dataset_config = ConfigDataset(**checkpoint["dataset_config"])
+        trainer.dino_config = ConfigDINO(**checkpoint["dino_config"])
+        trainer.dino_head_config = ConfigDINO_Head(**checkpoint["dino_head_config"])
+        trainer.loss_fn.center = checkpoint["loss_center"]
+        trainer.train(warmup=False, start_epoch=checkpoint["epoch"])
 
-    torch.save(trainer.model.state_dict(), save_file)
+    torch.save(trainer.model.state_dict(), save_path)
     # Log the model to the W&B run
-    run.log_model(path=save_file, name=configs["dataset_config"].name)
+    run.log_model(path=save_path, name=configs["dataset_config"].name)
 
 
 if __name__ == "__main__":
@@ -56,10 +71,13 @@ if __name__ == "__main__":
         help="Config YAML file for the dataset",
     )
     parser.add_argument(
-        "--save_file",
+        "--save_path",
         type=str,
         default="model_weights/model.pt",
         help="Where to save the model after training",
+    )
+    parser.add_argument(
+        "--checkpoint_path", type=str, default=None, help="Where we can resume training"
     )
 
     args = vars(parser.parse_args())
@@ -68,4 +86,8 @@ if __name__ == "__main__":
         args, ["dino_config", "dino_head_config", "dataset_config"]
     )
 
-    train(configs=train_configs, save_file=args["save_file"])
+    train(
+        configs=train_configs,
+        save_path=args["save_path"],
+        checkpoint_path=args["checkpoint_path"],
+    )
