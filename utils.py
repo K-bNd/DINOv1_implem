@@ -27,6 +27,10 @@ def get_random_apply(transforms: list[v2_transforms.Transform], prob=0.5):
     return v2_transforms.RandomApply(nn.ModuleList(transforms), p=prob)
 
 
+def load_model(filename: str):
+    return torch.load(filename)
+
+
 class DataAugmentationDINO:
     def __init__(
         self,

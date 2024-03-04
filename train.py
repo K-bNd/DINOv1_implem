@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import torch
 from torch.cuda import manual_seed_all as set_cuda_seed
 import argparse
@@ -44,9 +46,10 @@ def train(configs: dict, save_path: str, checkpoint_path: str | None):
         trainer.loss_fn.center = checkpoint["loss_center"]
         trainer.train(warmup=False, start_epoch=checkpoint["epoch"])
 
-    torch.save(trainer.model.state_dict(), save_path)
+    model_path = os.path.join(save_path, "model.pt")
+    torch.save(trainer.model.state_dict(), model_path)
     # Log the model to the W&B run
-    run.log_model(path=save_path, name=configs["dataset_config"].name)
+    run.log_model(path=model_path, name=configs["dataset_config"].name)
 
 
 if __name__ == "__main__":
@@ -73,11 +76,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save_path",
         type=str,
-        default="model_weights/model.pt",
+        default="model_weights",
         help="Where to save the model after training",
     )
     parser.add_argument(
-        "--checkpoint_path", type=str, default=None, help="Where we can resume training"
+        "--checkpoint_path",
+        type=str,
+        default="checkpoints",
+        help="Where we can resume training",
     )
 
     args = vars(parser.parse_args())
@@ -91,3 +97,5 @@ if __name__ == "__main__":
         save_path=args["save_path"],
         checkpoint_path=args["checkpoint_path"],
     )
+    Path(args["save_path"]).mkdir(parents=True)
+    Path(args["checkpoint_path"]).mkdir(parents=True)

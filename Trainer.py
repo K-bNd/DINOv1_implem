@@ -1,3 +1,4 @@
+import os
 import warnings
 import torch
 import torchvision
@@ -99,13 +100,13 @@ class Trainer:
     def _set_schedulers(self, lr) -> None:
         self.warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             self.optimizer,
-            start_factor=1e-5,
+            start_factor=self.dino_config.min_lr,
             end_factor=lr,
-            total_iters=self.dino_config.warmup_epochs * len(self.dataloader),
+            total_iters=self.dino_config.warmup_epochs,
         )
         self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer,
-            T_max=self.dino_config.epochs * len(self.dataloader),
+            T_max=self.dino_config.epochs,
             eta_min=lr,
         )
 
@@ -192,6 +193,9 @@ class Trainer:
         }
 
         torch.save(
-            state_dict, self.dino_config.checkpoint_dir + f"{epoch}_checkpoint.pt"
+            state_dict,
+            os.path.join(self.dino_config.checkpoint_dir, f"{epoch}_checkpoint.pt"),
         )
-        wandb.save(self.dino_config.checkpoint_dir + f"{epoch}_checkpoint.pt")
+        wandb.save(
+            os.path.join(self.dino_config.checkpoint_dir, f"{epoch}_checkpoint.pt")
+        )
