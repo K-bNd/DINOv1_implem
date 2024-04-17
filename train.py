@@ -103,10 +103,11 @@ if __name__ == "__main__":
         args, ["dino_config", "dino_head_config", "dataset_config"]
     )
 
+    Path(args["save_path"]).mkdir(parents=True)
+    Path(args["checkpoint_path"]).mkdir(parents=True)
+
     train(
         configs=train_configs,
         save_path=args["save_path"],
         checkpoint_path=args["checkpoint_path"],
     )
-    Path(args["save_path"]).mkdir(parents=True)
-    Path(args["checkpoint_path"]).mkdir(parents=True)

@@ -9,7 +9,6 @@ import warnings
 from yaml import load, FullLoader
 
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
-from models.DINO import DINO
 
 
 def get_configs(args: dict, options: list[str]):
