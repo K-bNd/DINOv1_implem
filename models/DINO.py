@@ -28,7 +28,9 @@ class DINO(nn.Module):
         self.teacher_backbone.load_state_dict(self.student_backbone.state_dict())
         self.teacher_head.load_state_dict(self.student_head.state_dict())
 
-    def _init_backbone(self):
+    def _init_backbone(
+        self,
+    ) -> tuple[timm.models.VisionTransformer, timm.models.VisionTransformer]:
         """Initialize backbone model"""
         match self.backbone_type:
             case "vit_tiny":

@@ -1,6 +1,7 @@
 from typing import Callable
 from pydantic import ValidationError
 import torch
+import timm
 import torch.nn as nn
 import torchvision.transforms.v2 as v2_transforms
 import torchvision
@@ -109,8 +110,9 @@ def init_dataloader(
     ]
 
 
-def load_model(filename: str) -> DINO:
-    model = DINO(inference=True, state_dict=torch.load(filename))
+def load_model(filename: str) -> nn.Module:
+    model = timm.models.VisionTransformer(num_classes=0)
+    model.load_state_dict(torch.load(filename))
     return model
 
 

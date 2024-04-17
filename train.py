@@ -1,5 +1,7 @@
+import datetime
 import os
 from pathlib import Path
+import time
 import torch
 from torch.cuda import manual_seed_all as set_cuda_seed
 import argparse
@@ -31,6 +33,8 @@ def train(configs: dict, save_path: str, checkpoint_path: str | None):
         device=device,
     )
 
+    start_time = time.time()
+
     if not run.resumed or checkpoint_path is None:
         trainer.train()
     else:
@@ -45,15 +49,22 @@ def train(configs: dict, save_path: str, checkpoint_path: str | None):
         trainer.dino_head_config = ConfigDINO_Head(**checkpoint["dino_head_config"])
         trainer.loss_fn.center = checkpoint["loss_center"]
         trainer.train(warmup=False, start_epoch=checkpoint["epoch"])
-
-    model_path = os.path.join(save_path, "model.pt")
-    torch.save(trainer.model.state_dict(), model_path)
-    # Log the model to the W&B run
-    run.log_model(path=model_path, name=configs["dataset_config"].name)
+        
+    model_dir = os.path.join(save_path, f"{configs["dataset_config"].name}_{run._run_id}")
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    student_path = os.path.join(model_dir, "student_backbone.pt")
+    teacher_path = os.path.join(model_dir, "teacher_backbone.pt")
+    torch.save(trainer.model.student_backbone.state_dict(), student_path)
+    torch.save(trainer.model.teacher_backbone.state_dict(), teacher_path)
+    
+    total_time_str = str(datetime.timedelta(seconds=int(time.time() - start_time)))
+    
+    print(f"Training took {total_time_str} !")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="DINO")
+    parser = argparse.ArgumentParser(description="DINOv1 training script")
 
     parser.add_argument(
         "--dino-config",
