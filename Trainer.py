@@ -1,14 +1,12 @@
 import os
-import warnings
 import torch
-import torchvision
 import wandb
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 from torch.optim import Optimizer
 from tqdm import tqdm
 from models.DINO import DINO
 from models.DINO_loss import DINO_Loss
-from utils import DataAugmentationDINO
+from utils import DataAugmentationDINO, init_dataloader
 
 
 class Trainer:
@@ -29,7 +27,13 @@ class Trainer:
 
         lr = dino_config.start_lr * dino_config.batch_size / 256
         self.optimizer = self._init_optimizer(dino_config.optimizer, lr)
-        self.dataloader = self._init_dataloader()
+        self.dataloader = init_dataloader(
+            self.dataset_config.name,
+            self.dataset_config.root,
+            self.dino_config.batch_size,
+            self.device,
+            transforms=DataAugmentationDINO(dataset_config),
+        )
         self._set_schedulers(lr)
 
         self.loss_fn = DINO_Loss(dino_config)
@@ -48,54 +52,6 @@ class Trainer:
                 return torch.optim.SGD(self.model.parameters())
             case _:
                 raise ValueError(f"Unsupported optimizer: {optimizer_type}")
-
-    def _init_dataloader(self) -> torch.utils.data.DataLoader:
-        """Initialize dataloader
-        Default values for training dataset are:
-        - CIFAR10
-        - CIFAR100
-        - ImageNet
-
-        WARNING: If the name of the dataset is neither of those, we will try to load from the given root
-        """
-        dataset = None
-        match self.dataset_config.name:
-            case "CIFAR10":
-                dataset = torchvision.datasets.CIFAR10(
-                    self.dataset_config.root,
-                    train=True,
-                    download=True,
-                    transform=DataAugmentationDINO(self.dataset_config),
-                )
-            case "CIFAR100":
-                dataset = torchvision.datasets.CIFAR100(
-                    self.dataset_config.root,
-                    train=True,
-                    download=True,
-                    transform=DataAugmentationDINO(self.dataset_config),
-                )
-            case "ImageNet":
-                dataset = torchvision.datasets.ImageNet(
-                    self.dataset_config.root,
-                    train=True,
-                    download=True,
-                    transform=DataAugmentationDINO(self.dataset_config),
-                )
-            case _:
-                warnings.warn(
-                    f"Unsupported dataset detected, will try to load it from disk"
-                )
-                dataset = torchvision.datasets.ImageFolder(
-                    self.dataset_config.root,
-                    transform=DataAugmentationDINO(self.dataset_config),
-                )
-
-        return torch.utils.data.DataLoader(
-            dataset,
-            self.dino_config.batch_size,
-            shuffle=True,
-            generator=torch.Generator(device=self.device),
-        )
 
     def _set_schedulers(self, lr) -> None:
         self.warmup_scheduler = torch.optim.lr_scheduler.LinearLR(

@@ -1,10 +1,14 @@
+from typing import Callable
 from pydantic import ValidationError
 import torch
 import torch.nn as nn
 import torchvision.transforms.v2 as v2_transforms
+import torchvision
+import warnings
 from yaml import load, FullLoader
 
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
+from models.DINO import DINO
 
 
 def get_configs(args: dict, options: list[str]):
@@ -27,8 +31,87 @@ def get_random_apply(transforms: list[v2_transforms.Transform], prob=0.5):
     return v2_transforms.RandomApply(nn.ModuleList(transforms), p=prob)
 
 
-def load_model(filename: str):
-    return torch.load(filename)
+def init_dataloader(
+    dataset_name: str,
+    root: str,
+    batch_size: int,
+    device: str,
+    transforms: Callable | None = None,
+) -> list[torch.utils.data.DataLoader]:
+    """Initialize dataloader
+    Default values for training dataset are:
+    - CIFAR10
+    - CIFAR100
+    - ImageNet
+
+    WARNING: If the name of the dataset is neither of those, we will try to load from the given root
+    """
+    train_dataset = None
+    test_dataset = None
+    match dataset_name:
+        case "CIFAR10":
+            train_dataset = torchvision.datasets.CIFAR10(
+                root,
+                train=True,
+                download=True,
+                transform=transforms,
+            )
+            test_dataset = torchvision.datasets.CIFAR10(
+                root,
+                train=False,
+                download=True,
+                transform=transforms,
+            )
+        case "CIFAR100":
+            train_dataset = torchvision.datasets.CIFAR100(
+                root,
+                train=True,
+                download=True,
+                transform=transforms,
+            )
+            test_dataset = torchvision.datasets.CIFAR100(
+                root,
+                train=False,
+                download=True,
+                transform=transforms,
+            )
+        case "ImageNet":
+            train_dataset = torchvision.datasets.ImageNet(
+                root,
+                split="train",
+                transform=transforms,
+            )
+            test_dataset = torchvision.datasets.ImageNet(
+                root, split="val", transform=transforms
+            )
+        case _:
+            warnings.warn(
+                f"Unsupported dataset detected, will try to load it from disk"
+            )
+            train_dataset = torchvision.datasets.ImageFolder(
+                root,
+                transform=transforms,
+            )
+
+    return [
+        torch.utils.data.DataLoader(
+            train_dataset,
+            batch_size,
+            shuffle=True,
+            generator=torch.Generator(device=device),
+        ),
+        torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size,
+            shuffle=True,
+            generator=torch.Generator(device=device),
+        ),
+    ]
+
+
+def load_model(filename: str) -> DINO:
+    model = DINO(inference=True, state_dict=torch.load(filename))
+    return model
 
 
 class DataAugmentationDINO:
