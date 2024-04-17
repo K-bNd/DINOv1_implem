@@ -1,17 +1,16 @@
 import datetime
 import os
-from pathlib import Path
 import time
 import torch
 from torch.cuda import manual_seed_all as set_cuda_seed
 import argparse
 import wandb
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
-from utils import get_configs
+from utils import get_configs, save_config
 from Trainer import Trainer
 
 
-def train(configs: dict, save_path: str, checkpoint_path: str | None):
+def train(configs: dict, save_path: str, checkpoint_path: str, checkpoint_freq: int):
     set_cuda_seed(configs["dino_config"].seed)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -30,12 +29,14 @@ def train(configs: dict, save_path: str, checkpoint_path: str | None):
         configs["dino_config"],
         configs["dino_head_config"],
         configs["dataset_config"],
+        checkpoint_path,
+        checkpoint_freq,
         device=device,
     )
 
     start_time = time.time()
 
-    if not run.resumed or checkpoint_path is None:
+    if not run.resumed:
         trainer.train()
     else:
         checkpoint = torch.load(wandb.restore(checkpoint_path))
@@ -49,17 +50,21 @@ def train(configs: dict, save_path: str, checkpoint_path: str | None):
         trainer.dino_head_config = ConfigDINO_Head(**checkpoint["dino_head_config"])
         trainer.loss_fn.center = checkpoint["loss_center"]
         trainer.train(warmup=False, start_epoch=checkpoint["epoch"])
-        
-    model_dir = os.path.join(save_path, f"{configs["dataset_config"].name}_{run._run_id}")
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+
+    model_dir = os.path.join(
+        save_path, f"{configs['dataset_config'].name}_{run._run_id}"
+    )
+    os.makedirs(model_dir, exist_ok=True)
+    save_config(model_dir, trainer.dataset_config)
+    save_config(model_dir, trainer.dino_config)
+    save_config(model_dir, trainer.dino_head_config)
     student_path = os.path.join(model_dir, "student_backbone.pt")
     teacher_path = os.path.join(model_dir, "teacher_backbone.pt")
     torch.save(trainer.model.student_backbone.state_dict(), student_path)
     torch.save(trainer.model.teacher_backbone.state_dict(), teacher_path)
-    
+
     total_time_str = str(datetime.timedelta(seconds=int(time.time() - start_time)))
-    
+
     print(f"Training took {total_time_str} !")
 
 
@@ -87,7 +92,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save_path",
         type=str,
-        default="model_weights",
+        default="training_output",
         help="Where to save the model after training",
     )
     parser.add_argument(
@@ -97,17 +102,25 @@ if __name__ == "__main__":
         help="Where we can resume training",
     )
 
+    parser.add_argument(
+        "--checkpoint_freq",
+        type=int,
+        default=10,
+        help="How often we save our checkpoints",
+    )
+
     args = vars(parser.parse_args())
 
     train_configs: dict = get_configs(
         args, ["dino_config", "dino_head_config", "dataset_config"]
     )
 
-    Path(args["save_path"]).mkdir(parents=True)
-    Path(args["checkpoint_path"]).mkdir(parents=True)
+    os.makedirs(args["save_path"], exist_ok=True)
+    os.makedirs(args["checkpoint_path"], exist_ok=True)
 
     train(
         configs=train_configs,
         save_path=args["save_path"],
         checkpoint_path=args["checkpoint_path"],
+        checkpoint_freq=args["checkpoint_freq"],
     )

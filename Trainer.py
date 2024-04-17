@@ -12,15 +12,21 @@ from utils import DataAugmentationDINO, init_dataloader
 class Trainer:
     def __init__(
         self,
+        run_id: str,
         dino_config: ConfigDINO,
         dino_head_config: ConfigDINO_Head,
         dataset_config: ConfigDataset,
+        checkpoint_path: str,
+        checkpoint_freq: int,
         device: str = "cuda",
     ):
+        self.run_id = run_id
         self.device = device
         self.dino_config = dino_config
         self.dino_head_config = dino_head_config
         self.dataset_config = dataset_config
+        self.checkpoint_path = checkpoint_path
+        self.checkpoint_freq = checkpoint_freq
 
         self.model = DINO(dino_config, dino_head_config, dataset_config)
         wandb.watch(self.model)
@@ -127,16 +133,17 @@ class Trainer:
             )
             self.train_one_epoch(epoch, loop)
 
-            if epoch % self.dino_config.checkpoint_freq == 0:
+            if epoch % self.checkpoint_freq == 0:
                 self.save_checkpoint(epoch)
             self.scheduler.step()
-
-        print("Training over !\n")
 
     def save_checkpoint(self, epoch: int) -> None:
         """Save current trainer state to disk"""
         state_dict = {
-            "model": self.model.state_dict(),
+            "teacher_backbone": self.model.teacher_backbone.state_dict(),
+            "teacher_head": self.model.teacher_head.state_dict(),
+            "student_backbone": self.model.student_backbone.state_dict(),
+            "student_head": self.model.student_head.state_dict(),
             "optimizer": self.optimizer.state_dict(),
             "scaler": self.scaler.state_dict(),
             "scheduler": self.scheduler.state_dict(),
@@ -150,8 +157,8 @@ class Trainer:
 
         torch.save(
             state_dict,
-            os.path.join(self.dino_config.checkpoint_dir, f"{epoch}_checkpoint.pt"),
+            os.path.join(self.checkpoint_path, f"{self.run_id}_{epoch}_checkpoint.pt"),
         )
         wandb.save(
-            os.path.join(self.dino_config.checkpoint_dir, f"{epoch}_checkpoint.pt")
+            os.path.join(self.checkpoint_path, f"{self.run_id}_{epoch}_checkpoint.pt")
         )

@@ -20,5 +20,3 @@ weight_decay_end: 0.4
 
 # Misc
 seed: 42
-checkpoint_freq: 10
-checkpoint_dir: "./logs/"

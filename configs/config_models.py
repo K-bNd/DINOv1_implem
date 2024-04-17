@@ -16,8 +16,6 @@ class ConfigDINO(BaseModel):
     min_lr: float = 1e-6
     start_lr: float = 5e-5
     seed: int = 42
-    checkpoint_freq: int = 10
-    checkpoint_dir: str = "./logs/"
     weight_decay: float = 0.04
     weight_decay_end: float = 0.4
 

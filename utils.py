@@ -1,5 +1,5 @@
 from typing import Callable
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 import torch
 import timm
 import torch.nn as nn
@@ -7,8 +7,15 @@ import torchvision.transforms.v2 as v2_transforms
 import torchvision
 import warnings
 from yaml import load, FullLoader
-
+import os
+import json
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
+
+
+def save_config(path: str, model: BaseModel):
+    """Saves Pydantic config to disk"""
+    with open(os.path.join(path, f"{model.__repr_name__()}.json"), "w") as f:
+        json.dump(model.model_dump_json(), f)
 
 
 def get_configs(args: dict, options: list[str]):
