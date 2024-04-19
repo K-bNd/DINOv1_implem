@@ -12,14 +12,37 @@ import json
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 
 
-def save_config(path: str, model: BaseModel):
-    """Saves Pydantic config to disk"""
+def save_config(path: str, model: BaseModel) -> None:
+    """
+    Saves a Pydantic configuration model to a JSON file on disk.
+
+    Args:
+        path (str): The path to the directory where the JSON file will be saved.
+        model (BaseModel): The Pydantic model instance containing the configuration data to be saved.
+    """
     with open(os.path.join(path, f"{model.__repr_name__()}.json"), "w") as f:
         json.dump(model.model_dump_json(), f)
 
 
 def get_configs(args: dict, options: list[str]):
-    """Get configs from argparse and use pydantic for validation"""
+    """
+    Get configs from argparse and use pydantic for validation
+
+    Args:
+        args (dict): Dictionary containing arguments parsed from command line using argparse.
+        options (list[str]): List of strings representing option names used in argparse.
+            These options should correspond to keys in the `args` dictionary and filenames
+            containing configuration data.
+
+    Returns:
+        dict: A dictionary containing validated configurations loaded from the specified files.
+            Keys in the dictionary correspond to the option names, and values are instances
+            of the appropriate Pydantic configuration models (ConfigDINO, ConfigDINO_Head, ConfigDataset).
+
+    Raises:
+        ValidationError: If any configuration file fails Pydantic validation, the corresponding
+            error message is printed, but the function continues processing other files.
+    """
     configs = {}
     config_types = [ConfigDINO, ConfigDINO_Head, ConfigDataset]
 
@@ -33,8 +56,40 @@ def get_configs(args: dict, options: list[str]):
     return configs
 
 
+def get_latest_file(folder_path):
+    """
+    Gets the latest file from a folder based on modification time.
+
+    Args:
+        folder_path: The path to the folder containing the files.
+
+    Returns:
+        The path to the latest file, or None if the folder is empty.
+    """
+    files = os.listdir(folder_path)
+    if not files:
+        raise FileNotFoundError(f"No checkpoint files found at given path")
+    latest_file = max(
+        files, key=lambda f: os.path.getmtime(os.path.join(folder_path, f))
+    )
+    return os.path.join(folder_path, latest_file)
+
+
 def get_random_apply(transforms: list[v2_transforms.Transform], prob=0.5):
-    """Apply RandomApply transformations with a given probability"""
+    """
+    Creates a `v2_transforms.RandomApply` instance that applies a random subset of
+    the provided transformations with a given probability.
+
+    Args:
+        transforms (List[Transform]): A list of `v2_transforms.Transform` objects representing
+            the available transformations.
+        prob (float, optional): The probability (between 0.0 and 1.0) of applying any
+            individual transformation within the RandomApply instance. Defaults to 0.5.
+
+    Returns:
+        RandomApply: A `v2_transforms.RandomApply` instance configured with the provided
+            transformations and probability.
+    """
     return v2_transforms.RandomApply(nn.ModuleList(transforms), p=prob)
 
 
@@ -45,13 +100,21 @@ def init_dataloader(
     device: str,
     transforms: Callable | None = None,
 ) -> list[torch.utils.data.DataLoader]:
-    """Initialize dataloader
-    Default values for training dataset are:
-    - CIFAR10
-    - CIFAR100
-    - ImageNet
+    """
+    Initializes dataloaders for training and testing datasets.
 
-    WARNING: If the name of the dataset is neither of those, we will try to load from the given root
+    Args:
+        dataset_name (str): Name of the dataset to load. Supported options include:
+            "CIFAR10", "CIFAR100", "ImageNet" or any dataset from the given root.
+        root (str): The path to the directory where the dataset is stored.
+        batch_size (int): The number of samples per batch for loading data.
+        device (str): The device to use for training ("cuda" or "cpu").
+        transforms (Callable, optional): A function or callable object that performs
+            transformations on the loaded data samples. Defaults to None.
+
+    Returns:
+        List[DataLoader]: A list containing two DataLoaders: one for the training set
+            and another for the testing set.
     """
     train_dataset = None
     test_dataset = None
