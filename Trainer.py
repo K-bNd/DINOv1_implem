@@ -33,7 +33,7 @@ class Trainer:
 
         lr = dino_config.start_lr * dino_config.batch_size / 256
         self.optimizer = self._init_optimizer(dino_config.optimizer, lr)
-        self.dataloader = init_dataloader(
+        self.dataloader, _ = init_dataloader(
             self.dataset_config.name,
             self.dataset_config.root,
             self.dino_config.batch_size,
@@ -140,25 +140,27 @@ class Trainer:
     def save_checkpoint(self, epoch: int) -> None:
         """Save current trainer state to disk"""
         state_dict = {
-            "teacher_backbone": self.model.teacher_backbone.state_dict(),
-            "teacher_head": self.model.teacher_head.state_dict(),
-            "student_backbone": self.model.student_backbone.state_dict(),
-            "student_head": self.model.student_head.state_dict(),
+            "run_id": self.run_id,
+            "model": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
             "scaler": self.scaler.state_dict(),
             "scheduler": self.scheduler.state_dict(),
+            "training_dtype": self.training_dtype,
             "amp_enabled": self.amp_enabled,
             "epoch": epoch,
             "dataset_config": self.dataset_config.model_dump(),
             "dino_config": self.dino_config.model_dump(),
             "dino_head_config": self.dino_head_config.model_dump(),
             "loss_center": self.loss_fn.center,
+            "checkpoint_path": self.checkpoint_path,
+            "checkpoint_freq": self.checkpoint_freq,
+            "teacher_backbone": self.model.teacher_backbone.state_dict(),
+            "teacher_head": self.model.teacher_head.state_dict(),
+            "student_backbone": self.model.student_backbone.state_dict(),
+            "student_head": self.model.student_head.state_dict(),
         }
 
         torch.save(
             state_dict,
             os.path.join(self.checkpoint_path, f"{self.run_id}_{epoch}_checkpoint.pt"),
-        )
-        wandb.save(
-            os.path.join(self.checkpoint_path, f"{self.run_id}_{epoch}_checkpoint.pt")
         )

@@ -1,0 +1,1 @@
+"{\"patch_size\":4,\"backbone_model\":\"vit_tiny\",\"out_dim\":1024,\"optimizer\":\"adamw\",\"warmup_epochs\":5,\"teacher_temp\":0.04,\"student_temp\":0.1,\"teacher_momemtum\":0.996,\"center_momentum\":0.9,\"epochs\":2,\"batch_size\":128,\"min_lr\":1e-6,\"start_lr\":0.00005,\"seed\":42,\"weight_decay\":0.04,\"weight_decay_end\":0.4}"
