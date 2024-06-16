@@ -41,7 +41,6 @@ class DINO(nn.Module):
                     embed_dim=self.embed_dim,
                     num_heads=3,
                     patch_size=self.model_config.patch_size,
-                    dynamic_img_size=True,
                 ), timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
@@ -131,7 +130,8 @@ class DINO(nn.Module):
 
     def forward(self, x: list, training=False):
         if not training:
-            return self.student_backbone(x)
+            with torch.no_grad():
+                return self.student_backbone(x)
 
         global_crops = torch.cat(x[:2], dim=0)
 

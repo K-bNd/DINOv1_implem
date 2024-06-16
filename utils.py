@@ -8,20 +8,25 @@ import torchvision
 import warnings
 from yaml import load, FullLoader
 import os
-import json
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 
 
-def save_config(path: str, model: BaseModel) -> None:
+def save_config(path: str, model: BaseModel) -> str:
     """
     Saves a Pydantic configuration model to a JSON file on disk.
 
     Args:
         path (str): The path to the directory where the JSON file will be saved.
         model (BaseModel): The Pydantic model instance containing the configuration data to be saved.
+
+    Returns:
+        str: The path to the created config file
     """
-    with open(os.path.join(path, f"{model.__repr_name__()}.json"), "w") as f:
-        json.dump(model.model_dump_json(), f)
+    config_path = os.path.join(path, f"{model.__repr_name__()}.json")
+    with open(config_path, "w") as f:
+        f.write(model.model_dump_json())
+
+    return config_path
 
 
 def get_configs(args: dict, options: list[str]):
@@ -177,12 +182,6 @@ def init_dataloader(
             generator=torch.Generator(device=device),
         ),
     ]
-
-
-def load_model(filename: str) -> nn.Module:
-    model = timm.models.VisionTransformer(num_classes=0)
-    model.load_state_dict(torch.load(filename))
-    return model
 
 
 class DataAugmentationDINO:
