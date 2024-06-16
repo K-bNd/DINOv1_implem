@@ -26,4 +26,4 @@ To evaluate the DINO model:
 3. Run the `eval.py` with the desired configuration from the CLI command
 
 ## References
-For more information on the underlying concepts and methodologies, refer to the original paper: [Self-supervised Learning of Pretext-invariant Representations](https://arxiv.org/pdf/2104.14294.pdf).
+For more information on the underlying concepts and methodologies, refer to the original paper: [Emerging Properties in Self-Supervised Vision Transformers](https://arxiv.org/pdf/2104.14294.pdf).
