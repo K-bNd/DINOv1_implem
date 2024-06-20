@@ -75,6 +75,7 @@ class Trainer:
     def train_one_epoch(self, epoch: int, loop: tqdm, warmup=False) -> None:
         """Train for one epoch"""
         for _, (crops, _) in loop:
+            self.optimizer.zero_grad()
             with torch.autocast(
                 device_type=self.device,
                 dtype=self.training_dtype,
@@ -86,7 +87,6 @@ class Trainer:
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.model.update_teacher(self.dino_config.teacher_momemtum)
-            self.optimizer.zero_grad()
             wandb.log(
                 {
                     "loss": loss.item(),

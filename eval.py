@@ -3,6 +3,7 @@ from sklearn.neighbors import KNeighborsClassifier
 import numpy as np
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 import torchvision.transforms.v2 as v2_transforms
 
@@ -74,16 +75,24 @@ class Evaluator:
                 v2_transforms.ToDtype(torch.float32, scale=True),
             ]
         )
-        res = self.model(torch.unsqueeze(transform(image), dim=0), training=False)
-        _, dim = res.shape
+        with torch.no_grad():
+            res = self.model(torch.unsqueeze(transform(image), dim=0), training=False)
+            _, dim = res.shape
         return res.reshape(dim)
 
     def eval(self, name: str) -> float | None:
+        acc = None
         match name:
             case "knn":
-                return self.eval_knn()
+                acc = self.eval_knn()
+                print(f"kNN accuracy: {acc}")
+            case "linear":
+                acc = self.eval_linear()
+                print(f"Linear classifier accuracy: {acc}")
             case _:
                 raise None
+
+        return acc
 
     def eval_knn(self, n_neighbors=3):
         """Measure accuracy with KNN classifiers"""
@@ -107,9 +116,55 @@ class Evaluator:
 
         return acc
 
+    def accuracy(self, logits, targets):
+        y_pred = logits.argmax(dim=1)
+        return torch.mean((y_pred == targets).float())
+
+    def eval_linear(self, epochs=20):
+        """Measure accuracy with linear classifiers"""
+        print("eval_linear")
+
+        backbone_dim = self.model.model_config.out_dim
+        model = LinearClassifier(
+            dim=backbone_dim, nb_classes=self.model.dataset_config.num_classes
+        )
+        model.train()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+        criterion = nn.CrossEntropyLoss()
+
+        for epoch in range(1, epochs + 1):
+            loop = tqdm(
+                self.train_dataloader,
+                desc="Training loop for linear classifier evaluation",
+                total=len(self.train_dataloader),
+                ascii=True,
+            )
+            loop.set_description(f"Epoch [{epoch}/{epochs}]")
+
+            for imgs, target in loop:
+                optimizer.zero_grad()
+                outputs = model(imgs)
+                loss = criterion(outputs, target)
+                loss.backward()
+                optimizer.step()
+                loop.set_postfix(
+                    {
+                        "loss": loss.item(),
+                        "accuracy": self.accuracy(outputs, target).item(),
+                    }
+                )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DINOv1 evaluation script")
+
+    parser.add_argument(
+        "--eval-name",
+        type=str,
+        default="linear",
+        choices=["knn", "linear"],
+        help="The evaluation metric to use",
+    )
 
     parser.add_argument(
         "--model-folder",
@@ -125,6 +180,4 @@ if __name__ == "__main__":
 
     dino_model: DINO = extract_model(args["model_folder"])
     evaluator = Evaluator(dino_model, args, device)
-    acc = evaluator.eval("knn")
-
-    print(f"KNN accuracy: {acc}")
+    evaluator.eval(args["eval_name"])

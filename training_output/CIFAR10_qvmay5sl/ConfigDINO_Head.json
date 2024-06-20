@@ -1,1 +1,6 @@
-"{\"out_dim\":1024,\"hidden_dim\":256,\"bottleneck_dim\":128,\"use_bn\":false}"
+{
+    "out_dim": 1024,
+    "hidden_dim": 256,
+    "bottleneck_dim": 128,
+    "use_bn": false
+}
