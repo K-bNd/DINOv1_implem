@@ -1,3 +1,4 @@
+from pyexpat import model
 import torch
 import timm
 import torch.nn as nn
@@ -22,8 +23,8 @@ class DINO(nn.Module):
 
         self.student_backbone, self.teacher_backbone = self._init_backbone()
 
-        self.student_head = DINO_Head(self.embed_dim, dino_head_config)
-        self.teacher_head = DINO_Head(self.embed_dim, dino_head_config)
+        self.student_head = DINO_Head(self.model_config.out_dim, dino_head_config)
+        self.teacher_head = DINO_Head(self.model_config.out_dim, dino_head_config)
 
         self.teacher_backbone.load_state_dict(self.student_backbone.state_dict())
         self.teacher_head.load_state_dict(self.student_head.state_dict())
@@ -34,49 +35,46 @@ class DINO(nn.Module):
         """Initialize backbone model"""
         match self.backbone_type:
             case "vit_tiny":
-                self.embed_dim = 192
                 return timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
-                    embed_dim=self.embed_dim,
+                    embed_dim=self.model_config.out_dim,
                     num_heads=3,
                     patch_size=self.model_config.patch_size,
                 ), timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
-                    embed_dim=self.embed_dim,
+                    embed_dim=self.model_config.out_dim,
                     num_heads=3,
                     patch_size=self.model_config.patch_size,
                 )
             case "vit_small":
-                self.embed_dim = 384
                 return timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
-                    embed_dim=self.embed_dim,
+                    embed_dim=self.model_config.out_dim,
                     num_heads=6,
                     patch_size=self.model_config.patch_size,
                     dynamic_img_size=True,
                 ), timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
-                    embed_dim=self.embed_dim,
+                    embed_dim=self.model_config.out_dim,
                     num_heads=6,
                     patch_size=self.model_config.patch_size,
                 )
             case "vit_base":
-                self.embed_dim = 768
                 return timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
-                    embed_dim=self.embed_dim,
+                    embed_dim=self.model_config.out_dim,
                     num_heads=12,
                     patch_size=self.model_config.patch_size,
                     dynamic_img_size=True,
                 ), timm.models.VisionTransformer(
                     img_size=self.dataset_config.img_size,
                     num_classes=0,
-                    embed_dim=self.embed_dim,
+                    embed_dim=self.model_config.out_dim,
                     num_heads=12,
                     patch_size=self.model_config.patch_size,
                 )

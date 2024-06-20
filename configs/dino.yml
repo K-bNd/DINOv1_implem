@@ -2,7 +2,7 @@
 backbone_model: vit_tiny
 patch_size: 4
 optimizer: adamw
-out_dim: 1024
+out_dim: 192
 
 teacher_temp: 0.04
 teacher_momentum: 0.996
