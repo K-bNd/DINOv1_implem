@@ -31,7 +31,7 @@ class DINO(nn.Module):
 
     def _init_backbone(
         self,
-    ) -> tuple[timm.models.VisionTransformer, timm.models.VisionTransformer]:
+    ) -> tuple[nn.Module, nn.Module]:
         """Initialize backbone model"""
         match self.backbone_type:
             case "vit_tiny":
@@ -77,6 +77,48 @@ class DINO(nn.Module):
                     embed_dim=self.model_config.out_dim,
                     num_heads=12,
                     patch_size=self.model_config.patch_size,
+                )
+            case "xcit_tiny":
+                return timm.models.Xcit(
+                    img_size=self.dataset_config.img_size,
+                    patch_size=self.model_config.patch_size,
+                    num_classes=0,
+                    embed_dim=self.model_config.out_dim,
+                    num_heads=3,
+                ), timm.models.Xcit(
+                    img_size=self.dataset_config.img_size,
+                    patch_size=self.model_config.patch_size,
+                    num_classes=0,
+                    embed_dim=self.model_config.out_dim,
+                    num_heads=3,
+                )
+            case "xcit_small":
+                return timm.models.Xcit(
+                    img_size=self.dataset_config.img_size,
+                    patch_size=self.model_config.patch_size,
+                    num_classes=0,
+                    embed_dim=self.model_config.out_dim,
+                    num_heads=6,
+                ), timm.models.Xcit(
+                    img_size=self.dataset_config.img_size,
+                    patch_size=self.model_config.patch_size,
+                    num_classes=0,
+                    embed_dim=self.model_config.out_dim,
+                    num_heads=6,
+                )
+            case "xcit_base":
+                return timm.models.Xcit(
+                    img_size=self.dataset_config.img_size,
+                    patch_size=self.model_config.patch_size,
+                    num_classes=0,
+                    embed_dim=self.model_config.out_dim,
+                    num_heads=12,
+                ), timm.models.Xcit(
+                    img_size=self.dataset_config.img_size,
+                    patch_size=self.model_config.patch_size,
+                    num_classes=0,
+                    embed_dim=self.model_config.out_dim,
+                    num_heads=12,
                 )
             case _:
                 raise ValueError(f"Unsupported backbone model: {self.backbone_type}")
