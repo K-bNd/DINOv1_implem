@@ -6,7 +6,7 @@ from torch.optim import Optimizer
 from tqdm import tqdm
 from models.DINO import DINO
 from models.DINO_loss import DINO_Loss
-from utils import DataAugmentationDINO, init_dataloader
+from utils import DataTransformDINO, init_dataloader
 
 
 class Trainer:
@@ -38,7 +38,7 @@ class Trainer:
             self.dataset_config.root,
             self.dino_config.batch_size,
             self.device,
-            transforms=DataAugmentationDINO(dataset_config),
+            transforms=DataTransformDINO(dataset_config, dino_config),
         )
         self._set_schedulers(lr)
 

@@ -1,7 +1,6 @@
 from typing import Callable
 from pydantic import BaseModel, ValidationError
 import torch
-import timm
 import torch.nn as nn
 import torchvision.transforms.v2 as v2_transforms
 import torchvision
@@ -184,10 +183,11 @@ def init_dataloader(
     ]
 
 
-class DataAugmentationDINO:
+class DataTransformDINO:
     def __init__(
         self,
-        config: ConfigDataset,
+        dataset_config: ConfigDataset,
+        model_config: ConfigDINO,
     ):
         flip_and_color_jitter = v2_transforms.Compose(
             [
@@ -207,18 +207,20 @@ class DataAugmentationDINO:
             [
                 v2_transforms.ToImage(),
                 v2_transforms.ToDtype(torch.float32, scale=True),
-                v2_transforms.Normalize(config.dataset_means, config.dataset_stds),
+                v2_transforms.Normalize(
+                    dataset_config.dataset_means, dataset_config.dataset_stds
+                ),
             ]
         )
 
-        blur_kernel_size = int(config.img_size * 0.1)
+        blur_kernel_size = int(dataset_config.img_size * 0.1)
 
         # first global crop
         self.global_transfo1 = v2_transforms.Compose(
             [
                 v2_transforms.RandomResizedCrop(
-                    config.img_size,
-                    scale=config.global_crop_ratio,
+                    dataset_config.img_size,
+                    scale=dataset_config.global_crop_ratio,
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
@@ -231,8 +233,8 @@ class DataAugmentationDINO:
         self.global_transfo2 = v2_transforms.Compose(
             [
                 v2_transforms.RandomResizedCrop(
-                    config.img_size,
-                    scale=config.global_crop_ratio,
+                    dataset_config.img_size,
+                    scale=dataset_config.global_crop_ratio,
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
@@ -245,12 +247,12 @@ class DataAugmentationDINO:
         )
 
         # transformation for the local small crops
-        self.local_crops_number = config.nb_local_crops
+        self.local_crops_number = dataset_config.nb_local_crops
         self.local_transfo = v2_transforms.Compose(
             [
                 v2_transforms.RandomResizedCrop(
-                    config.local_crop_size,
-                    scale=config.local_crop_ratio,
+                    dataset_config.local_crop_size,
+                    scale=dataset_config.local_crop_ratio,
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
@@ -261,10 +263,13 @@ class DataAugmentationDINO:
             ]
         )
 
+        self.model_config = model_config
+
     def __call__(self, image):
+        resized_image = v2_transforms.Resize(self.model_config.img_size)(image)
         crops = []
-        crops.append(self.global_transfo1(image))
-        crops.append(self.global_transfo2(image))
+        crops.append(self.global_transfo1(resized_image))
+        crops.append(self.global_transfo2(resized_image))
         for _ in range(self.local_crops_number):
-            crops.append(self.local_transfo(image))
+            crops.append(self.local_transfo(resized_image))
         return crops

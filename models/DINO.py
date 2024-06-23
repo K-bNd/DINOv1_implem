@@ -1,9 +1,9 @@
-from pyexpat import model
 import torch
 import timm
 import torch.nn as nn
 from models.DINO_head import DINO_Head
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
+from torchvision import models as torchvision_models
 
 
 class DINO(nn.Module):
@@ -121,7 +121,16 @@ class DINO(nn.Module):
                     num_heads=12,
                 )
             case _:
-                raise ValueError(f"Unsupported backbone model: {self.backbone_type}")
+                if self.backbone_type in torchvision_models.__dict__.keys():
+                    student = torchvision_models.__dict__[self.backbone_type]()
+                    teacher = torchvision_models.__dict__[self.backbone_type]()
+                    embed_dim = student.fc.weight.shape[1]
+                    self.model_config.out_dim = embed_dim
+                    return student, teacher
+                else:
+                    raise ValueError(
+                        f"Unsupported backbone model: {self.backbone_type}"
+                    )
 
     def update_teacher(self, teacher_momentum: float):
         with torch.no_grad():

@@ -1,10 +1,12 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
 class ConfigDINO(BaseModel):
     patch_size: int = 16
     backbone_model: str = "vit_tiny"
-    out_dim: int = 1024
+    img_size: Optional[int] = None
+    out_dim: Optional[int] = 192
     optimizer: str = "adamw"
     warmup_epochs: int = 5
     teacher_temp: float = 0.04

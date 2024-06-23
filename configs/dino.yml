@@ -1,7 +1,10 @@
 # Model
 backbone_model: vit_tiny
+# please add the img_size for pretrained models (resnet50)
+img_size: null
 patch_size: 4
 optimizer: adamw
+# you can ignore this argument if you use pretrained models
 out_dim: 192
 
 teacher_temp: 0.04
