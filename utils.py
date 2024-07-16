@@ -6,6 +6,7 @@ import torchvision.transforms.v2 as v2_transforms
 import torchvision
 import warnings
 import os
+import math
 from yaml import load, FullLoader
 import json
 from models.DINO import DINO
@@ -109,6 +110,31 @@ def get_latest_file(folder_path):
         files, key=lambda f: os.path.getmtime(os.path.join(folder_path, f))
     )
     return os.path.join(folder_path, latest_file)
+
+
+def weight_decay_schedule(iters, total_iterations, initial_wd=0.04, final_wd=0.4):
+    """
+    Calculates a weight decay schedule based on a cosine decay function.
+
+    The schedule starts with an initial weight decay value (initial_wd) and gradually
+    decreases to a final weight decay value (final_wd) over the course of a specified
+    number of iterations (total_iterations). The schedule follows a cosine decay pattern.
+
+    Args:
+        iters (int): The current iteration number.
+        total_iterations (int): The total number of iterations for the weight decay schedule.
+        initial_wd (float, optional): The initial weight decay value. Defaults to 0.04.
+        final_wd (float, optional): The final weight decay value. Defaults to 0.4.
+
+    Returns:
+        float: The weight decay value for the current iteration.
+    """
+    return (
+        initial_wd
+        + (final_wd - initial_wd)
+        * (1 - math.cos(math.pi * iters / total_iterations))
+        / 2
+    )
 
 
 def get_random_apply(transforms: list[v2_transforms.Transform], prob=0.5):

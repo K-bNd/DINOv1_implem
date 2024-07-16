@@ -6,7 +6,7 @@ from torch.optim import Optimizer
 from tqdm import tqdm
 from models.DINO import DINO
 from models.DINO_loss import DINO_Loss
-from utils import DataTransformDINO, init_dataloader
+from utils import DataTransformDINO, init_dataloader, weight_decay_schedule
 
 
 class Trainer:
@@ -51,11 +51,22 @@ class Trainer:
         """Initialize optimizer"""
         match optimizer_type:
             case "adamw":
-                return torch.optim.AdamW(self.model.parameters(), lr=lr)
+                return torch.optim.AdamW(
+                    self.model.parameters(),
+                    lr=lr,
+                    weight_decay=self.dino_config.weight_decay_start,
+                )
             case "adam":
-                return torch.optim.Adam(self.model.parameters(), lr=lr)
+                return torch.optim.Adam(
+                    self.model.parameters(),
+                    lr=lr,
+                    weight_decay=self.dino_config.weight_decay_start,
+                )
             case "sgd":
-                return torch.optim.SGD(self.model.parameters())
+                return torch.optim.SGD(
+                    self.model.parameters(),
+                    weight_decay=self.dino_config.weight_decay_start,
+                )
             case _:
                 raise ValueError(f"Unsupported optimizer: {optimizer_type}")
 
@@ -74,7 +85,8 @@ class Trainer:
 
     def train_one_epoch(self, epoch: int, loop: tqdm, warmup=False) -> None:
         """Train for one epoch"""
-        for _, (crops, _) in loop:
+        self.loss_fn.update_teacher_temp(epoch)
+        for it, (crops, _) in loop:
             self.optimizer.zero_grad()
             with torch.autocast(
                 device_type=self.device,
@@ -87,19 +99,26 @@ class Trainer:
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.model.update_teacher(self.dino_config.teacher_momemtum)
+            self.optimizer.param_groups[0]["weight_decay"] = weight_decay_schedule(
+                epoch * loop.total + it,
+                loop.total * self.dino_config.epochs,
+                self.dino_config.weight_decay_start,
+                self.dino_config.weight_decay_end,
+            )
             wandb.log(
                 {
                     "loss": loss.item(),
                     "lr": self.scheduler.get_last_lr()[0],
+                    "weight_decay": self.optimizer.param_groups[0]["weight_decay"],
                 }
             )
 
             if warmup:
                 loop.set_description(
-                    f"(Warmup) Epoch [{epoch} / {self.dino_config.warmup_epochs}]"
+                    f"(Warmup) Epoch [{epoch + 1} / {self.dino_config.warmup_epochs}]"
                 )
             else:
-                loop.set_description(f"Epoch [{epoch} / {self.dino_config.epochs}]")
+                loop.set_description(f"Epoch [{epoch + 1} / {self.dino_config.epochs}]")
             loop.set_postfix(
                 {
                     "Loss": loss.item(),
@@ -109,7 +128,7 @@ class Trainer:
 
     def warmup_train(self):
         """Warmup training run with linear lr scheduler"""
-        for warmup_epoch in range(1, self.dino_config.warmup_epochs + 1):
+        for warmup_epoch in range(self.dino_config.warmup_epochs):
             loop = tqdm(
                 enumerate(self.dataloader),
                 desc="Warmup training",
@@ -120,14 +139,14 @@ class Trainer:
             self.warmup_scheduler.step()
         print("Warmup done !\n")
 
-    def train(self, warmup=True, start_epoch=1):
+    def train(self, warmup=True, start_epoch=0):
         """
         Train the model using given parameters and cosine scheduler.
         """
         self.model.train()
         if warmup:
             self.warmup_train()
-        for epoch in range(start_epoch, self.dino_config.epochs + 1):
+        for epoch in range(start_epoch, self.dino_config.epochs):
             loop = tqdm(
                 enumerate(self.dataloader), desc="Training", total=len(self.dataloader)
             )

@@ -8,17 +8,18 @@ class ConfigDINO(BaseModel):
     img_size: Optional[int] = None
     out_dim: Optional[int] = 192
     optimizer: str = "adamw"
-    warmup_epochs: int = 5
-    teacher_temp: float = 0.04
+    warmup_epochs: int = 10
+    teacher_temp_start: float = 0.04
+    teacher_temp_end: float = 0.07
     student_temp: float = 0.1
     teacher_momemtum: float = 0.996
     center_momentum: float = 0.9
-    epochs: int = 20
+    epochs: int = 100
     batch_size: int = 128
     min_lr: float = 1e-6
     start_lr: float = 5e-5
     seed: int = 42
-    weight_decay: float = 0.04
+    weight_decay_start: float = 0.04
     weight_decay_end: float = 0.4
 
 
