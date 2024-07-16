@@ -5,7 +5,7 @@ img_size: null
 patch_size: 8
 optimizer: adamw
 # you can ignore this argument if you use pretrained models
-out_dim: 192
+out_dim: 384
 
 teacher_temp_start: 0.04
 teacher_temp_end: 0.07
