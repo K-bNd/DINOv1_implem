@@ -204,7 +204,7 @@ def init_dataloader(
             test_dataset = torchvision.datasets.CIFAR100(
                 root,
                 train=False,
-                download=True,
+                download=False,
                 transform=transforms,
             )
         case "ImageNet":
@@ -215,6 +215,17 @@ def init_dataloader(
             )
             test_dataset = torchvision.datasets.ImageNet(
                 root, split="val", transform=transforms
+            )
+        case "Imagenette":
+            train_dataset = torchvision.datasets.Imagenette(
+                root,
+                download=True,
+                split="train",
+                size="160px",
+                transform=transforms,
+            )
+            test_dataset = torchvision.datasets.Imagenette(
+                root, download=False, split="val", size="160px", transform=transforms
             )
         case _:
             warnings.warn(
@@ -271,8 +282,6 @@ class DataTransformDINO:
             ]
         )
 
-        blur_kernel_size = int(dataset_config.img_size * 0.1)
-
         # first global crop
         self.global_transfo1 = v2_transforms.Compose(
             [
@@ -282,7 +291,7 @@ class DataTransformDINO:
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
-                v2_transforms.GaussianBlur(blur_kernel_size),
+                v2_transforms.GaussianBlur(7),
                 normalize,
             ]
         )
@@ -296,9 +305,7 @@ class DataTransformDINO:
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
-                get_random_apply(
-                    [v2_transforms.GaussianBlur(blur_kernel_size)], prob=0.1
-                ),
+                get_random_apply([v2_transforms.GaussianBlur(7)], prob=0.1),
                 v2_transforms.RandomSolarize(128, p=0.2),
                 normalize,
             ]
@@ -314,9 +321,7 @@ class DataTransformDINO:
                     interpolation=v2_transforms.InterpolationMode.BICUBIC,
                 ),
                 flip_and_color_jitter,
-                get_random_apply(
-                    [v2_transforms.GaussianBlur(blur_kernel_size)], prob=0.5
-                ),
+                get_random_apply([v2_transforms.GaussianBlur(7)], prob=0.5),
                 normalize,
             ]
         )
@@ -324,10 +329,11 @@ class DataTransformDINO:
         self.model_config = model_config
 
     def __call__(self, image):
-        resized_image = v2_transforms.Resize(self.model_config.img_size)(image)
+        if self.model_config.img_size:
+            image = v2_transforms.Resize(self.model_config.img_size)(image)
         crops = []
-        crops.append(self.global_transfo1(resized_image))
-        crops.append(self.global_transfo2(resized_image))
+        crops.append(self.global_transfo1(image))
+        crops.append(self.global_transfo2(image))
         for _ in range(self.local_crops_number):
-            crops.append(self.local_transfo(resized_image))
+            crops.append(self.local_transfo(image))
         return crops
