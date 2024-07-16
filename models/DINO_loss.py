@@ -6,10 +6,10 @@ from configs.config_models import ConfigDINO
 
 
 class DINO_Loss(nn.Module):
-    def __init__(self, config: ConfigDINO):
+    def __init__(self, config: ConfigDINO, out_dim: int):
         super(DINO_Loss, self).__init__()
 
-        self.out_dim = config.out_dim
+        self.out_dim = out_dim
         self.teacher_temp = config.teacher_temp_start
         self.teacher_temp_schedule = np.concatenate(
             (
@@ -24,7 +24,7 @@ class DINO_Loss(nn.Module):
         self.student_temp = config.student_temp
         self.center_momentum = config.center_momentum
 
-        self.register_buffer("center", torch.zeros(1, config.out_dim))
+        self.register_buffer("center", torch.zeros(1, self.out_dim))
 
     @torch.no_grad()
     def update_center(self, teacher_out):

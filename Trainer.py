@@ -42,7 +42,7 @@ class Trainer:
         )
         self._set_schedulers(lr)
 
-        self.loss_fn = DINO_Loss(dino_config)
+        self.loss_fn = DINO_Loss(dino_config, dino_head_config.out_dim)
         self.amp_enabled = True if self.device != "cpu" else False
         self.training_dtype = torch.float16 if self.amp_enabled else torch.bfloat16
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp_enabled)
