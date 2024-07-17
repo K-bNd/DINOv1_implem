@@ -1,6 +1,6 @@
 # DINO head parameters
 
-out_dim: 65536
+out_dim: 4096
 hidden_dim: 2048
 bottleneck_dim: 256
 use_bn: False
