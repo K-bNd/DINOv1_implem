@@ -5,8 +5,8 @@ root: ./data
 img_size: 160
 num_classes: 10
 
-global_crop_ratio: !!python/tuple [0.4, 1.0]
-local_crop_ratio: !!python/tuple [0.05, 0.4]
+global_crop_ratio: !!python/tuple [0.32, 1.0]
+local_crop_ratio: !!python/tuple [0.05, 0.32]
 local_crop_size: 64
 nb_local_crops: 8
 
