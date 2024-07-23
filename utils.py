@@ -112,27 +112,27 @@ def get_latest_file(folder_path):
     return os.path.join(folder_path, latest_file)
 
 
-def weight_decay_schedule(iters, total_iterations, initial_wd=0.04, final_wd=0.4):
+def cosine_scheduler(iters, total_iterations, initial_value, final_value):
     """
-    Calculates a weight decay schedule based on a cosine decay function.
+    Calculates a schedule based on a cosine decay function.
 
-    The schedule starts with an initial weight decay value (initial_wd) and gradually
-    decreases to a final weight decay value (final_wd) over the course of a specified
+    The schedule starts with an initial value (initial_value) and gradually
+    converge to a final value (final_value) over the course of a specified
     number of iterations (total_iterations). The schedule follows a cosine decay pattern.
 
     Args:
         iters (int): The current iteration number.
-        total_iterations (int): The total number of iterations for the weight decay schedule.
-        initial_wd (float, optional): The initial weight decay value. Defaults to 0.04.
-        final_wd (float, optional): The final weight decay value. Defaults to 0.4.
+        total_iterations (int): The total number of iterations for the schedule.
+        initial_value (float, optional): The initial value.
+        final_value (float, optional): The final value.
 
     Returns:
-        float: The weight decay value for the current iteration.
+        float: The value for the current iteration.
     """
     return (
-        initial_wd
-        + (final_wd - initial_wd)
-        * (1 - math.cos(math.pi * iters / total_iterations))
+        initial_value
+        + (final_value - initial_value)
+        * (1 + math.cos(math.pi * iters / total_iterations))
         / 2
     )
 

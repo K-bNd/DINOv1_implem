@@ -6,7 +6,7 @@ from torch.optim import Optimizer
 from tqdm import tqdm
 from models.DINO import DINO
 from models.DINO_loss import DINO_Loss
-from utils import DataTransformDINO, init_dataloader, weight_decay_schedule
+from utils import DataTransformDINO, cosine_scheduler, init_dataloader
 
 
 class Trainer:
@@ -40,7 +40,8 @@ class Trainer:
             self.device,
             transforms=DataTransformDINO(dataset_config, dino_config),
         )
-        self._set_schedulers(lr)
+
+        self.scheduler = self._set_scheduler(lr, len(self.dataloader))
 
         self.loss_fn = DINO_Loss(dino_config, dino_head_config.out_dim)
         self.amp_enabled = True if self.device != "cpu" else False
@@ -70,18 +71,19 @@ class Trainer:
             case _:
                 raise ValueError(f"Unsupported optimizer: {optimizer_type}")
 
-    def _set_schedulers(self, lr) -> None:
-        self.warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
+    def _set_scheduler(self, lr, nb_iters) -> torch.optim.lr_scheduler.LRScheduler:
+        warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             self.optimizer,
-            start_factor=lr,
-            end_factor=self.dino_config.min_lr,
-            total_iters=self.dino_config.warmup_epochs,
+            start_factor=0.0,
+            end_factor=lr,
+            total_iters=self.dino_config.warmup_epochs * nb_iters,
         )
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer,
-            T_max=self.dino_config.epochs,
+            T_max=self.dino_config.epochs * nb_iters,
             eta_min=self.dino_config.min_lr,
         )
+        return torch.optim.lr_scheduler.ChainedScheduler([warmup_scheduler, scheduler])
 
     def train_one_epoch(self, epoch: int, loop: tqdm, warmup=False) -> None:
         """Train for one epoch"""
@@ -99,7 +101,7 @@ class Trainer:
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.model.update_teacher(self.dino_config.teacher_momemtum)
-            self.optimizer.param_groups[0]["weight_decay"] = weight_decay_schedule(
+            self.optimizer.param_groups[0]["weight_decay"] = cosine_scheduler(
                 epoch * loop.total + it,
                 loop.total * self.dino_config.epochs,
                 self.dino_config.weight_decay_start,
@@ -108,10 +110,12 @@ class Trainer:
             wandb.log(
                 {
                     "loss": loss.item(),
-                    "lr": self.scheduler.get_last_lr()[0],
                     "weight_decay": self.optimizer.param_groups[0]["weight_decay"],
+                    "lr": self.scheduler.get_last_lr()[0],
                 }
             )
+
+            self.scheduler.step()
 
             if warmup:
                 loop.set_description(
@@ -122,7 +126,6 @@ class Trainer:
             loop.set_postfix(
                 {
                     "Loss": loss.item(),
-                    "Learning rate": self.scheduler.get_last_lr()[0],
                 }
             )
 
@@ -136,7 +139,6 @@ class Trainer:
                 ascii=True,
             )
             self.train_one_epoch(warmup_epoch, loop, warmup=True)
-            self.warmup_scheduler.step()
         print("Warmup done !\n")
 
     def train(self, warmup=True, start_epoch=0):
@@ -154,7 +156,6 @@ class Trainer:
 
             if epoch % self.checkpoint_freq == 0:
                 self.save_checkpoint(epoch)
-            self.scheduler.step()
 
     def save_checkpoint(self, epoch: int) -> None:
         """Save current trainer state to disk"""
