@@ -18,7 +18,7 @@ class DINO_Loss(nn.Module):
                     config.teacher_temp_end,
                     config.epochs // 3,
                 ),
-                np.ones(config.teacher_temp_end, config.epochs - config.epochs // 3),
+                np.ones(config.epochs - config.epochs // 3),
             )
         )
         self.student_temp = config.student_temp
