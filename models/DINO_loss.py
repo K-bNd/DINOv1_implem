@@ -16,7 +16,7 @@ class DINO_Loss(nn.Module):
                 np.linspace(
                     config.teacher_temp_start,
                     config.teacher_temp_end,
-                    config.epochs // 3,
+                    config.warmup_epochs,
                 ),
                 np.ones(config.epochs - config.epochs // 3),
             )
