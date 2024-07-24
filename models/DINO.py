@@ -5,6 +5,8 @@ from models.DINO_head import DINO_Head
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 from torchvision import models as torchvision_models
 
+from utils import cosine_scheduler
+
 
 class DINO(nn.Module):
     """DINOv1 model implementation"""
@@ -20,6 +22,8 @@ class DINO(nn.Module):
         self.model_config = dino_config
         self.dataset_config = dataset_config
         self.backbone_type = dino_config.backbone_model
+        self.teacher_momentum_start = dino_config.teacher_momentum_start
+        self.teacher_momentum_end = dino_config.teacher_momentum_end
 
         self.student_backbone, self.teacher_backbone = self._init_backbone()
 
@@ -132,7 +136,20 @@ class DINO(nn.Module):
                         f"Unsupported backbone model: {self.backbone_type}"
                     )
 
-    def update_teacher(self, teacher_momentum: float):
+    def update_teacher(self, it: int, total_iterations: int) -> None:
+        """
+        Update the teacher model parameters using exponential moving average (EMA) with cosine decay.
+
+        Parameters:
+        - it (int): Current iteration.
+        - total_iterations (int): Total number of iterations for training.
+        """
+        teacher_momentum = cosine_scheduler(
+            it,
+            total_iterations,
+            self.teacher_momentum_start,
+            self.teacher_momentum_end,
+        )
         with torch.no_grad():
             for (student_ps_backbone, teacher_ps_backbone), (
                 student_ps_head,

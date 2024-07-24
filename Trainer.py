@@ -99,7 +99,9 @@ class Trainer:
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
             self.scaler.update()
-            self.model.update_teacher(self.dino_config.teacher_momemtum)
+            self.model.update_teacher(
+                epoch * loop.total + it, loop.total * self.dino_config.epochs
+            )
             self.optimizer.param_groups[0]["weight_decay"] = cosine_scheduler(
                 epoch * loop.total + it,
                 loop.total * self.dino_config.epochs,

@@ -112,7 +112,9 @@ def get_latest_file(folder_path):
     return os.path.join(folder_path, latest_file)
 
 
-def cosine_scheduler(iters, total_iterations, initial_value, final_value):
+def cosine_scheduler(
+    iters: int, total_iterations: int, initial_value: float, final_value: float
+):
     """
     Calculates a schedule based on a cosine decay function.
 
@@ -123,8 +125,8 @@ def cosine_scheduler(iters, total_iterations, initial_value, final_value):
     Args:
         iters (int): The current iteration number.
         total_iterations (int): The total number of iterations for the schedule.
-        initial_value (float, optional): The initial value.
-        final_value (float, optional): The final value.
+        initial_value (float): The initial value.
+        final_value (float): The final value.
 
     Returns:
         float: The value for the current iteration.
