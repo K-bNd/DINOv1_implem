@@ -9,11 +9,10 @@ import os
 import math
 from yaml import load, FullLoader
 import json
-from models.DINO import DINO
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
 
 
-def extract_model(path: str) -> DINO:
+def extract_model(path: str):
     """
     Extract the necessary information for evaluation run
     based on training run files.
