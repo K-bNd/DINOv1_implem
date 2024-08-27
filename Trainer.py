@@ -74,7 +74,8 @@ class Trainer:
     def _set_scheduler(self, lr, nb_iters) -> torch.optim.lr_scheduler.LRScheduler:
         warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             self.optimizer,
-            end_factor=lr,
+            start_factor=lr,
+            end_factor=self.dino_config.min_lr,
             total_iters=self.dino_config.warmup_epochs * nb_iters,
         )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(

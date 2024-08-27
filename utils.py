@@ -228,7 +228,7 @@ def init_dataloader(
                 root,
                 download=True,
                 split="train",
-                size="160px",
+                size="full",
                 transform=transforms,
             )
             test_dataset = torchvision.datasets.Imagenette(

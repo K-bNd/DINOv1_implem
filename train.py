@@ -197,7 +197,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset-config",
         type=str,
-        default="./configs/cifar100.yml",
+        default="./configs/imagenette.yml",
         help="Config YAML file for the dataset",
     )
     parser.add_argument(
