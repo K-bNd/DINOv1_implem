@@ -183,6 +183,9 @@ def init_dataloader(
     test_dataset = None
     match dataset_name:
         case "CIFAR10":
+            warnings.warn(
+                f"Current transformations are adapted to the ImageNet dataset"
+            )
             train_dataset = torchvision.datasets.CIFAR10(
                 root,
                 train=True,
@@ -196,6 +199,9 @@ def init_dataloader(
                 transform=transforms,
             )
         case "CIFAR100":
+            warnings.warn(
+                f"Current transformations are adapted to the ImageNet dataset"
+            )
             train_dataset = torchvision.datasets.CIFAR100(
                 root,
                 train=True,
@@ -226,7 +232,7 @@ def init_dataloader(
                 transform=transforms,
             )
             test_dataset = torchvision.datasets.Imagenette(
-                root, download=False, split="val", size="160px", transform=transforms
+                root, download=False, split="val", size="full", transform=transforms
             )
         case _:
             warnings.warn(
