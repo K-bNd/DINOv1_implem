@@ -8,38 +8,8 @@ import warnings
 import os
 import math
 from yaml import load, FullLoader
-import json
 from configs.config_models import ConfigDINO, ConfigDINO_Head, ConfigDataset
-
-
-def extract_model(path: str):
-    """
-    Extract the necessary information for evaluation run
-    based on training run files.
-
-    Args:
-        path (str): The path to folder that contains config files and models
-
-    Returns:
-        DINO: complete model ready for evaluation
-    """
-
-    config_dataset: dict = json.load(open(os.path.join(path, "ConfigDataset.json")))
-    config_dino_head: dict = json.load(open(os.path.join(path, "ConfigDINO_Head.json")))
-    config_dino: dict = json.load(open(os.path.join(path, "ConfigDINO.json")))
-
-    model = DINO(
-        ConfigDINO(**config_dino),
-        ConfigDINO_Head(**config_dino_head),
-        ConfigDataset(**config_dataset),
-    )
-    model.student_backbone.load_state_dict(
-        torch.load(os.path.join(path, "student_backbone.pt"))
-    )
-
-    model.eval()
-
-    return model
+from torch.utils.data import DataLoader
 
 
 def save_config(path: str, model: BaseModel) -> str:
@@ -196,7 +166,6 @@ def init_dataloader(
                 root,
                 train=False,
                 download=True,
-                transform=transforms,
             )
         case "CIFAR100":
             warnings.warn(
@@ -209,10 +178,7 @@ def init_dataloader(
                 transform=transforms,
             )
             test_dataset = torchvision.datasets.CIFAR100(
-                root,
-                train=False,
-                download=False,
-                transform=transforms,
+                root, train=False, download=True
             )
         case "ImageNet":
             train_dataset = torchvision.datasets.ImageNet(
@@ -220,20 +186,26 @@ def init_dataloader(
                 split="train",
                 transform=transforms,
             )
-            test_dataset = torchvision.datasets.ImageNet(
-                root, split="val", transform=transforms
-            )
+            test_dataset = torchvision.datasets.ImageNet(root, split="val")
         case "Imagenette":
             train_dataset = torchvision.datasets.Imagenette(
                 root,
                 download=True,
                 split="train",
-                size="full",
+                size="160px",
                 transform=transforms,
             )
             test_dataset = torchvision.datasets.Imagenette(
-                root, download=False, split="val", size="full", transform=transforms
+                root, download=True, split="val", size="160px"
             )
+        case "STL10":
+            train_dataset = torchvision.datasets.STL10(
+                root,
+                split="unlabeled",
+                download=True,
+                transform=transforms,
+            )
+            test_dataset = torchvision.datasets.STL10(root, split="test", download=True)
         case _:
             warnings.warn(
                 f"Unsupported dataset detected, will try to load it from disk"
@@ -244,13 +216,13 @@ def init_dataloader(
             )
 
     return [
-        torch.utils.data.DataLoader(
+        DataLoader(
             train_dataset,
             batch_size,
             shuffle=True,
             generator=torch.Generator(device=device),
         ),
-        torch.utils.data.DataLoader(
+        DataLoader(
             test_dataset,
             batch_size,
             shuffle=True,
