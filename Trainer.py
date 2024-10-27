@@ -32,8 +32,7 @@ class Trainer:
         self.model = DINO(dino_config, dino_head_config, dataset_config)
         wandb.watch(self.model)
 
-        lr = dino_config.start_lr * dino_config.batch_size / 256
-        self.optimizer = self._init_optimizer(dino_config.optimizer, lr)
+        self.optimizer = self._init_optimizer(dino_config.optimizer)
         self.dataloader, _ = init_dataloader(
             self.dataset_config.name,
             self.dataset_config.root,
@@ -42,26 +41,26 @@ class Trainer:
             transforms=DataTransformDINO(dataset_config, dino_config),
         )
 
-        self.scheduler = self._set_scheduler(self.dino_config.lr_scheduler_type, lr, len(self.dataloader))
+        self.scheduler = self._set_scheduler(
+            self.dino_config.lr_scheduler_type, len(self.dataloader)
+        )
 
         self.loss_fn = DINO_Loss(dino_config, dino_head_config.out_dim)
         self.amp_enabled = True if self.device != "cpu" else False
         self.training_dtype = torch.float16 if self.amp_enabled else torch.bfloat16
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.amp_enabled)
 
-    def _init_optimizer(self, optimizer_type: str, lr: float) -> Optimizer:
+    def _init_optimizer(self, optimizer_type: str) -> Optimizer:
         """Initialize optimizer"""
         match optimizer_type:
             case "adamw":
                 return torch.optim.AdamW(
                     self.model.parameters(),
-                    lr=lr,
                     weight_decay=self.dino_config.weight_decay_start,
                 )
             case "adam":
                 return torch.optim.Adam(
                     self.model.parameters(),
-                    lr=lr,
                     weight_decay=self.dino_config.weight_decay_start,
                 )
             case "sgd":
@@ -73,11 +72,11 @@ class Trainer:
                 logging.error(f"Unsupported optimizer: {optimizer_type}")
                 raise ValueError(f"Unsupported optimizer: {optimizer_type}")
 
-    def _set_scheduler(self, scheduler_type: str, lr: float, nb_iters: int) -> torch.optim.lr_scheduler.LRScheduler:
+    def _set_scheduler(
+        self, scheduler_type: str, nb_iters: int
+    ) -> torch.optim.lr_scheduler.LRScheduler:
         warmup_scheduler = torch.optim.lr_scheduler.LinearLR(
             self.optimizer,
-            start_factor=lr,
-            end_factor=self.dino_config.min_lr,
             total_iters=self.dino_config.warmup_epochs * nb_iters,
         )
         match scheduler_type:
@@ -90,8 +89,8 @@ class Trainer:
             case "linear":
                 scheduler = torch.optim.lr_scheduler.LinearLR(
                     self.optimizer,
-                    start_factor=lr,
-                    end_factor=self.dino_config.min_lr,
+                    start_factor=1.0,
+                    end_factor=self.dino_config.batch_size / 256,
                     total_iters=self.dino_config.epochs * nb_iters,
                 )
             case "plateau":
