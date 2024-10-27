@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 
@@ -8,6 +8,7 @@ class ConfigDINO(BaseModel):
     img_size: Optional[int] = None
     out_dim: Optional[int] = 192
     optimizer: str = "adamw"
+    lr_scheduler_type: Literal["cosine", "linear", "plateau", "step"] = "linear"
     warmup_epochs: int = 10
     teacher_temp_start: float = 0.04
     teacher_temp_end: float = 0.07
@@ -22,6 +23,7 @@ class ConfigDINO(BaseModel):
     seed: int = 42
     weight_decay_start: float = 0.04
     weight_decay_end: float = 0.4
+    lr_step_size: int = 10
 
 
 class ConfigDINO_Head(BaseModel):

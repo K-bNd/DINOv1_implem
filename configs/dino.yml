@@ -15,6 +15,7 @@ student_temp: 0.1
 center_momentum: 0.9
 
 # Training
+lr_scheduler_type: linear
 warmup_epochs: 10
 epochs: 100
 batch_size: 256
@@ -22,6 +23,7 @@ start_lr: 5e-4
 min_lr: 1e-6
 weight_decay: 0.04
 weight_decay_end: 0.4
+lr_step_size: 10
 
 # Misc
 seed: 42
