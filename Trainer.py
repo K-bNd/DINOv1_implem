@@ -99,6 +99,7 @@ class Trainer:
                     mode="min",
                     factor=0.1,
                     patience=5 * nb_iters,
+                    min_lr=self.dino_config.min_lr
                 )
             case "step":
                 scheduler = torch.optim.lr_scheduler.StepLR(
