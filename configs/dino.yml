@@ -18,7 +18,7 @@ center_momentum: 0.9
 lr_scheduler_type: plateau
 warmup_epochs: 10
 epochs: 100
-batch_size: 256
+batch_size: 128
 start_lr: 5e-4
 min_lr: 1e-6
 weight_decay: 0.04
