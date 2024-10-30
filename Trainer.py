@@ -143,7 +143,10 @@ class Trainer:
                 }
             )
 
-            self.scheduler.step()
+            if self.dino_config.lr_scheduler_type != "plateau":
+                self.scheduler.step()
+            else:
+                self.scheduler.step(loss)
 
             if warmup:
                 loop.set_description(
