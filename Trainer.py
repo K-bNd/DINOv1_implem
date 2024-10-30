@@ -101,6 +101,7 @@ class Trainer:
                     patience=5 * nb_iters,
                     min_lr=self.dino_config.min_lr
                 )
+                return scheduler
             case "step":
                 scheduler = torch.optim.lr_scheduler.StepLR(
                     self.optimizer,
@@ -143,7 +144,7 @@ class Trainer:
                 }
             )
 
-            if self.dino_config.lr_scheduler_type != "plateau" or warmup:
+            if self.dino_config.lr_scheduler_type != "plateau":
                 self.scheduler.step()
             else:
                 self.scheduler.step(loss)
