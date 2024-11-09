@@ -140,7 +140,7 @@ class Trainer:
                 {
                     "loss": loss.item(),
                     "weight_decay": self.optimizer.param_groups[0]["weight_decay"],
-                    "lr": self.scheduler.get_last_lr()[0],
+                    "lr": self.scheduler.get_last_lr()[0] if self.dino_config.lr_scheduler_type != "plateau" else [group['lr'] for group in self.optimizer.param_groups][0],
                 }
             )
 
